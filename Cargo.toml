@@ -1,0 +1,13 @@
+[package]
+name = "casbin"
+version = "0.1.0"
+edition = "2018"
+license = "Apache-2.0"
+homepage = "https://github.com/devolutions/casbin-rs"
+repository = "https://github.com/devolutions/casbin-rs"
+keywords = ["casbin", "access", "control", "acl", "rbac", "abac"]
+description = "An authorization library that supports access control models like ACL, RBAC, ABAC"
+authors = ["Marc-André Moreau <mamoreau@devolutions.net>",
+           "Sébastien Duquette <sduquette@devolutions.net>"]
+
+[dependencies]
