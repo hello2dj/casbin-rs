@@ -11,3 +11,5 @@ authors = ["Marc-André Moreau <mamoreau@devolutions.net>",
            "Sébastien Duquette <sduquette@devolutions.net>"]
 
 [dependencies]
+regex = "1.0"
+lazy_static = "1.0.0"
