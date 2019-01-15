@@ -12,7 +12,7 @@ impl Config {
         Config::new_from_string(&contents)
     }
 
-    pub fn new_from_string(contents: &str) -> Result<Self, Box<Error>> {
+    pub fn new_from_string(_contents: &str) -> Result<Self, Box<Error>> {
         let config = Config {
             dummy: "".to_string(),
         };

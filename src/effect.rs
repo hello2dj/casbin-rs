@@ -1,4 +1,5 @@
 
+#[derive(PartialEq)]
 pub enum Effect {
     Allow,
     Indeterminate,
