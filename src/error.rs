@@ -9,6 +9,16 @@ pub enum Error {
     FileWrite,
     NotImplemented,
     UnsupportedEffect,
+    // Temporary error type, we probably want more specific errors when we fail to parse.
+    ParsingFailure,
+    MissingKey,
+    InvalidValue,
+}
+
+impl From<io::Error> for Error {
+    fn from(error: io::Error) -> Self {
+        Error::Io(error)
+    }
 }
 
 impl fmt::Display for Error {
@@ -19,6 +29,9 @@ impl fmt::Display for Error {
             Error::FileWrite => write!(f, "File write error"),
             Error::NotImplemented => write!(f, "Not implemented"),
             Error::UnsupportedEffect => write!(f, "Unsupported effect"),
+            Error::ParsingFailure => write!(f, "Parsing failure"),
+            Error::MissingKey => write!(f, "Missing key in configuration"),
+            Error::InvalidValue => write!(f, "Invalid value in configuration"),
         }
     }
 }
