@@ -1,6 +1,7 @@
 
 use std::collections::HashMap;
 
+use crate::error::Error;
 use crate::rbac::role::Role;
 use crate::rbac::role_manager::RoleManager;
 
@@ -11,32 +12,32 @@ pub struct DefaultRoleManager {
 
 impl RoleManager for DefaultRoleManager {
 
-    fn clear(&mut self) {
-        self.all_roles.clear();
+    fn clear(&mut self) -> Result<(), Error> {
+        Ok(self.all_roles.clear())
     }
 
-    fn add_link(&mut self, name1: &str, name2: &str, domain: &str) {
-
+    fn add_link(&mut self, name1: &str, name2: &str, domain: &str) -> Result<(), Error> {
+        Err(Error::NotImplemented)
     }
 
-    fn delete_link(&mut self, name1: &str, name2: &str, domain: &str) {
-
+    fn delete_link(&mut self, name1: &str, name2: &str, domain: &str) -> Result<(), Error> {
+        Err(Error::NotImplemented)
     }
 
-    fn has_link(&self, name1: &str, name2: &str, domain: &str) {
-
+    fn has_link(&self, name1: &str, name2: &str, domain: &str) -> Result<bool, Error>{
+        Err(Error::NotImplemented)
     }
 
-    fn get_roles(&self, name: &str, domain: &str) -> Vec<String> {
-        Vec::new()
+    fn get_roles(&self, name: &str, domain: &str) -> Result<Vec<String>, Error> {
+        Err(Error::NotImplemented)
     }
 
-    fn get_users(&self, name: &str) -> Vec<String> {
-        Vec::new()
+    fn get_users(&self, name: &str) -> Result<Vec<String>, Error> {
+        Err(Error::NotImplemented)
     }
 
-    fn print_roles() {
-
+    fn print_roles() -> Result<(), Error> {
+        Err(Error::NotImplemented)
     }
 }
 
