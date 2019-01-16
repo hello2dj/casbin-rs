@@ -1,4 +1,4 @@
-use crate::rbac::role_manager::RoleManager;
+use crate::rbac::RoleManager;
 
 pub struct Assertion {
     pub key: String,
