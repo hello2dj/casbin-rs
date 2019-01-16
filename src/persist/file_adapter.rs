@@ -5,6 +5,7 @@ use crate::persist::adapter::Adapter;
 pub struct FileAdapter ();
 
 impl Adapter for FileAdapter {
+
     fn load_policy(&self, model: Model) {
 
     }
