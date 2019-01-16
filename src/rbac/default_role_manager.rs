@@ -15,27 +15,27 @@ impl RoleManager for DefaultRoleManager {
     }
 
     fn add_link(&mut self, name1: &str, name2: &str, domain: &str) -> Result<(), Error> {
-        Err(Error::NotImplemented)
+        unimplemented!()
     }
 
     fn delete_link(&mut self, name1: &str, name2: &str, domain: &str) -> Result<(), Error> {
-        Err(Error::NotImplemented)
+        unimplemented!()
     }
 
     fn has_link(&self, name1: &str, name2: &str, domain: &str) -> Result<bool, Error> {
-        Err(Error::NotImplemented)
+        unimplemented!()
     }
 
     fn get_roles(&self, name: &str, domain: &str) -> Result<Vec<String>, Error> {
-        Err(Error::NotImplemented)
+        unimplemented!()
     }
 
     fn get_users(&self, name: &str) -> Result<Vec<String>, Error> {
-        Err(Error::NotImplemented)
+        unimplemented!()
     }
 
     fn print_roles() -> Result<(), Error> {
-        Err(Error::NotImplemented)
+        unimplemented!()
     }
 }
 

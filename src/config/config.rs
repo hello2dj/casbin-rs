@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
+use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::error::Error;

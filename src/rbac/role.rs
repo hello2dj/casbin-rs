@@ -22,8 +22,8 @@ impl Role {
 
     pub fn delete_role(&mut self, role: Role) {
         let index = self.roles.iter().position(|x| *x == role);
-        if index.is_some() {
-            self.roles.remove(index.unwrap());
+        if let Some(index) = index {
+            self.roles.remove(index);
         }
     }
 
