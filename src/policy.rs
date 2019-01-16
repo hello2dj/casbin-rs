@@ -1,9 +1,9 @@
-pub struct Policy {
-    pub value: String,
-}
+use crate::error::Error;
+use crate::model::Model;
+use crate::rbac::RoleManager;
 
-impl Policy {
-    pub fn new() -> Self {
-        Policy { value: "".to_string() }
+impl Model {
+    pub fn build_role_links(&mut self, role_manager: &mut Box<RoleManager>) -> Result<(), Error> {
+        unimplemented!()
     }
 }
