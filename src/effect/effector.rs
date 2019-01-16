@@ -1,4 +1,3 @@
-
 use crate::effect::Effect;
 use crate::error::Error;
 
@@ -9,49 +8,60 @@ pub trait Effector {
                 let mut result = false;
                 for eft in effects {
                     match eft {
-                        Effect::Allow => { result = true; break; },
-                        _ => { }
+                        Effect::Allow => {
+                            result = true;
+                            break;
+                        }
+                        _ => {}
                     }
                 }
                 Ok(result)
-            },
+            }
             "!some(where (p_eft == deny))" => {
                 let mut result = true;
                 for eft in effects {
                     match eft {
-                        Effect::Deny => { result = false; break; },
-                        _ => { }
+                        Effect::Deny => {
+                            result = false;
+                            break;
+                        }
+                        _ => {}
                     }
                 }
                 Ok(result)
-            },
+            }
             "some(where (p_eft == allow)) && !some(where (p_eft == deny))" => {
                 let mut result = false;
                 for eft in effects {
                     match eft {
-                        Effect::Allow => { result = true; },
-                        Effect::Deny => { result = false; break; },
-                        _ => { },
+                        Effect::Allow => {
+                            result = true;
+                        }
+                        Effect::Deny => {
+                            result = false;
+                            break;
+                        }
+                        _ => {}
                     }
                 }
                 Ok(result)
-            },
+            }
             "priority(p_eft) || deny" => {
                 let mut result = false;
                 for eft in effects {
                     if eft == Effect::Indeterminate {
                         match eft {
-                            Effect::Allow => { result = true; },
-                            _ => { result = false },
+                            Effect::Allow => {
+                                result = true;
+                            }
+                            _ => result = false,
                         }
                         break;
                     }
                 }
                 Ok(result)
-            },
-            _ => {
-                Err(Error::UnsupportedEffect)
             }
+            _ => Err(Error::UnsupportedEffect),
         }
     }
 }

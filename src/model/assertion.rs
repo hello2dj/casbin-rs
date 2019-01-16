@@ -1,4 +1,3 @@
-
 use crate::rbac::role_manager::RoleManager;
 
 pub struct Assertion {

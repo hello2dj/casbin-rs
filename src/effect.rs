@@ -1,9 +1,8 @@
-
 #[derive(PartialEq)]
 pub enum Effect {
     Allow,
     Indeterminate,
-    Deny
+    Deny,
 }
 
 pub mod effector;

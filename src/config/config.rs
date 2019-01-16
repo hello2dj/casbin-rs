@@ -1,8 +1,8 @@
 // Note: multi-line values are not currently supported.
 
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use std::collections::HashMap;
 
 use regex::Regex;
 
@@ -20,19 +20,16 @@ pub struct Config {
 }
 
 impl Config {
-    
     /// Load a configuration file.
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         let contents = fs::read_to_string(path)?;
         let config = Config::from_string(&contents)?;
-        Ok(config)   
+        Ok(config)
     }
 
     /// Parse a configuration from a string.
     pub fn from_string(contents: &str) -> Result<Self, Error> {
-        let mut config = Config {
-            data: HashMap::new()
-        };
+        let mut config = Config { data: HashMap::new() };
         config.parse(contents)?;
         Ok(config)
     }
@@ -40,11 +37,14 @@ impl Config {
     /// Set the `value` for `key` in the configuration.
     pub fn set(&mut self, key: &str, value: &str, section: Option<&str>) {
         let section = section.unwrap_or(DEFAULT_SECTION);
-        
+
         if !self.data.contains_key(section) {
             self.data.insert(section.to_string(), HashMap::new());
         }
-        self.data.get_mut(section).expect("data should always contain `section`").insert(key.to_string(), value.to_string());
+        self.data
+            .get_mut(section)
+            .expect("data should always contain `section`")
+            .insert(key.to_string(), value.to_string());
     }
 
     fn parse(&mut self, contents: &str) -> Result<(), Error> {
@@ -54,7 +54,7 @@ impl Config {
             if line.starts_with('#') || line.starts_with(';') {
                 continue;
             } else if line.starts_with('[') && line.ends_with(']') {
-                section = line.get(1..line.len()-1).ok_or(Error::ParsingFailure)?;
+                section = line.get(1..line.len() - 1).ok_or(Error::ParsingFailure)?;
             } else {
                 if REGEX_CONFIG.is_match(line) {
                     let captures = REGEX_CONFIG.captures(line).ok_or(Error::ParsingFailure)?;
@@ -134,7 +134,10 @@ mod tests {
         assert_eq!(config.float64("math.f64", Some("math")).unwrap(), 64.1);
 
         // other section
-        assert_eq!(config.string("name", Some("other")).unwrap(), "ATC自动化测试^-^&($#……#");
+        assert_eq!(
+            config.string("name", Some("other")).unwrap(),
+            "ATC自动化测试^-^&($#……#"
+        );
         assert_eq!(config.string("key1", Some("other")).unwrap(), "test key");
 
         config.set("key1", "new test key", Some("other"));

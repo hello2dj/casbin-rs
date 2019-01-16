@@ -1,4 +1,3 @@
-
 use std::collections::HashMap;
 
 use crate::error::Error;
@@ -11,7 +10,6 @@ pub struct DefaultRoleManager {
 }
 
 impl RoleManager for DefaultRoleManager {
-
     fn clear(&mut self) -> Result<(), Error> {
         Ok(self.all_roles.clear())
     }
@@ -24,7 +22,7 @@ impl RoleManager for DefaultRoleManager {
         Err(Error::NotImplemented)
     }
 
-    fn has_link(&self, name1: &str, name2: &str, domain: &str) -> Result<bool, Error>{
+    fn has_link(&self, name1: &str, name2: &str, domain: &str) -> Result<bool, Error> {
         Err(Error::NotImplemented)
     }
 

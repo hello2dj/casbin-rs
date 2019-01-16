@@ -1,12 +1,10 @@
-
 use crate::error::Error;
 use crate::model::model::Model;
 use crate::persist::adapter::Adapter;
 
-pub struct FileAdapter ();
+pub struct FileAdapter();
 
 impl Adapter for FileAdapter {
-
     fn load_policy(&self, model: Model) -> Result<(), Error> {
         Err(Error::NotImplemented)
     }
@@ -23,8 +21,13 @@ impl Adapter for FileAdapter {
         Err(Error::NotImplemented)
     }
 
-    fn remove_filtered_policy(&self, sec: &str, ptype: &str,
-                              field_index: i32, field_values: Vec<String>) -> Result<(), Error> {
+    fn remove_filtered_policy(
+        &self,
+        sec: &str,
+        ptype: &str,
+        field_index: i32,
+        field_values: Vec<String>,
+    ) -> Result<(), Error> {
         Err(Error::NotImplemented)
     }
 }

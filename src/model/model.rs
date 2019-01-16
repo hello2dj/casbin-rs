@@ -1,17 +1,15 @@
-
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use std::collections::HashMap;
 
-use crate::error::Error;
 use crate::config::config::Config;
+use crate::error::Error;
 
 pub struct Model {
     pub data: HashMap<String, String>,
 }
 
 impl Model {
-
     fn load_assertion(&self, cfg: Config, sec: &str, key: &str) -> Result<bool, Error> {
         Err(Error::NotImplemented)
     }
@@ -33,9 +31,7 @@ impl Model {
     }
 
     pub fn new_from_string(text: &str) -> Result<Self, Error> {
-        let mut model = Model {
-            data: HashMap::new()
-        };
+        let mut model = Model { data: HashMap::new() };
         Ok(model)
     }
 
