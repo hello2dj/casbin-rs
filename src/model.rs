@@ -9,6 +9,8 @@ use crate::error::Error;
 use crate::config::Config;
 use crate::assertion::Assertion;
 
+mod function;
+
 pub struct Model {
     pub data: HashMap<String, String>,
 }
