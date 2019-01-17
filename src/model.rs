@@ -4,10 +4,12 @@ use std::path::Path;
 use std::collections::HashMap;
 
 use lazy_static::lazy_static;
+use regex::Regex;
 
 use crate::error::Error;
 use crate::config::Config;
 use crate::assertion::Assertion;
+use crate::util::{escape_assertion, remove_comments};
 
 pub struct Model {
     pub data: HashMap<String, String>,
@@ -25,11 +27,11 @@ lazy_static! {
     };
 }
 
-pub fn get_section_name(name: &str) -> &str {
+fn get_section_name(name: &str) -> &str {
     SECTION_NAME_MAP.get(name).unwrap()
 }
 
-pub fn get_section_value(sec: &str, i: i32) -> String {
+fn get_section_value(sec: &str, i: i32) -> String {
     if i == 1 {
         sec.to_string()
     } else {
@@ -51,10 +53,14 @@ impl Model {
         }
 
         if sec == "r" || sec == "p" {
-            assertion.tokens = assertion.value.split(", ").map(|v| v.to_string()).collect();
+            assertion.tokens = assertion.value.split(", ").map(|v|
+                format!("{}_{}", key, v)
+            ).collect();
+        } else {
+
         }
 
-        unimplemented!()
+        Ok(true)
     }
 
     fn load_section(&mut self, cfg: &Config, sec: &str) -> Result<(), Error> {
