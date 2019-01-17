@@ -12,7 +12,7 @@ pub trait RoleManager {
     fn clear(&mut self) -> Result<(), Error>;
     fn add_link(&mut self, name1: &str, name2: &str, domain: Option<&str>) -> Result<(), Error>;
     fn delete_link(&mut self, name1: &str, name2: &str, domain: Option<&str>) -> Result<(), Error>;
-    fn has_link(&self, name1: &str, name2: &str, domain: Option<&str>) -> Result<bool, Error>;
+    fn has_link(&self, name1: &str, name2: &str, domain: Option<&str>) -> bool;
     fn get_roles(&self, name: &str, domain: Option<&str>) -> Result<Vec<String>, Error>;
     fn get_users(&self, name: &str) -> Result<Vec<String>, Error>;
     fn print_roles(&self) -> Result<(), Error>;
