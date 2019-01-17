@@ -1,4 +1,5 @@
-mod builtin_operators;
+
+pub mod builtin_operators;
 
 use lazy_static::lazy_static;
 use regex::Regex;

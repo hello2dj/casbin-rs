@@ -11,6 +11,10 @@ use crate::config::Config;
 use crate::assertion::Assertion;
 use crate::util::{escape_assertion, remove_comments};
 
+mod function;
+
+pub use crate::model::function::{FunctionMap, get_function_map};
+
 pub struct Model {
     pub data: HashMap<String, String>,
 }
