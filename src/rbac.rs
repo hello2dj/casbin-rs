@@ -1,4 +1,6 @@
 use std::fmt;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use crate::error::Error;
 
@@ -19,7 +21,7 @@ pub trait RoleManager {
 #[derive(Clone)]
 pub struct Role {
     pub name: String,
-    roles: Vec<Role>,
+    roles: Vec<Rc<RefCell<Role>>>,
 }
 
 impl Role {
@@ -30,13 +32,13 @@ impl Role {
         }
     }
 
-    pub fn add_role(&mut self, role: Role) {
+    pub fn add_role(&mut self, role: Rc<RefCell<Role>>) {
         if !self.roles.contains(&role) {
             self.roles.push(role);
         }
     }
 
-    pub fn delete_role(&mut self, role: Role) {
+    pub fn delete_role(&mut self, role: Rc<RefCell<Role>>) {
         let index = self.roles.iter().position(|x| *x == role);
         if let Some(index) = index {
             self.roles.remove(index);
@@ -53,7 +55,7 @@ impl Role {
         }
 
         for role in &self.roles {
-            if role.has_role(name, hierarchy_level - 1) {
+            if role.borrow().has_role(name, hierarchy_level - 1) {
                 return true;
             }
         }
@@ -63,7 +65,7 @@ impl Role {
 
     pub fn has_direct_role(&self, name: &str) -> bool {
         for role in &self.roles {
-            if self.name == role.name {
+            if self.name == role.borrow().name {
                 return true;
             }
         }
@@ -74,7 +76,7 @@ impl Role {
     pub fn get_roles(&self) -> Vec<String> {
         let mut roles = Vec::new();
         for role in &self.roles {
-            roles.push(role.name.clone());
+            roles.push(role.borrow().name.clone());
         }
         roles
     }

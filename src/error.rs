@@ -9,6 +9,7 @@ pub enum Error {
     ParsingFailure,
     MissingKey,
     InvalidValue,
+    MissingRole(String),
 }
 
 impl From<io::Error> for Error {
@@ -25,6 +26,7 @@ impl fmt::Display for Error {
             Error::ParsingFailure => write!(f, "Parsing failure"),
             Error::MissingKey => write!(f, "Missing key in configuration"),
             Error::InvalidValue => write!(f, "Invalid value in configuration"),
+            Error::MissingRole(ref name) => write!(f, "Missing role {}", name),
         }
     }
 }
