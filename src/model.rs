@@ -16,7 +16,7 @@ mod function;
 pub use crate::model::function::{FunctionMap, get_function_map};
 
 pub struct Model {
-    pub data: HashMap<String, String>,
+    pub data: HashMap<String, HashMap<String, Assertion>>,
 }
 
 lazy_static! {
@@ -61,8 +61,16 @@ impl Model {
                 format!("{}_{}", key, v)
             ).collect();
         } else {
-
+            assertion.value = escape_assertion(remove_comments(assertion.value.as_str())).to_string();
         }
+
+        if !self.data.contains_key(sec) {
+            let sec_map: HashMap<String, Assertion> = HashMap::new();
+            self.data.insert(sec.to_string(), sec_map);
+        }
+
+        let sec_map = self.data.get_mut(sec).unwrap();
+        sec_map.insert(key.to_string(), assertion);
 
         Ok(true)
     }
