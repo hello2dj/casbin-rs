@@ -4,7 +4,7 @@ use crate::util::builtin_operators;
 
 pub type Function = Fn(&str, &str) -> bool;
 
-type FunctionMap = HashMap<&'static str, Box<Function>>;
+pub type FunctionMap = HashMap<&'static str, Box<Function>>;
 
 pub fn get_function_map() -> FunctionMap {
     let mut map = FunctionMap::new();

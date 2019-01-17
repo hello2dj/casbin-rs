@@ -8,6 +8,19 @@ pub enum Effect {
 }
 
 pub trait Effector {
+    fn merge_effects(&self, expr: &str, effects: Vec<Effect>, _results: Vec<f64>) -> Result<bool, Error>;
+}
+
+pub struct DefaultEffector{}
+
+impl DefaultEffector{
+    /// Create an instance of DefaultEffector
+    pub fn new() -> Self {
+        DefaultEffector{}
+    }
+}
+
+impl Effector for DefaultEffector {
     fn merge_effects(&self, expr: &str, effects: Vec<Effect>, _results: Vec<f64>) -> Result<bool, Error> {
         match expr.as_ref() {
             "some(where (p_eft == allow))" => {
@@ -71,4 +84,3 @@ pub trait Effector {
         }
     }
 }
-

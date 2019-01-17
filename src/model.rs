@@ -11,6 +11,8 @@ use crate::assertion::Assertion;
 
 mod function;
 
+pub use crate::model::function::{FunctionMap, get_function_map};
+
 pub struct Model {
     pub data: HashMap<String, String>,
 }
