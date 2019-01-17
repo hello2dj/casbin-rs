@@ -5,11 +5,12 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 lazy_static! {
-    static ref REGEX_ESCAPE: Regex = Regex::new(r"(\.)").unwrap();
+    static ref REGEX_ESCAPE: Regex = Regex::new(r"(^|[\s|&><+\-*/\(\)|!,]+)([r|p])(\.)").unwrap();
 }
 
 pub fn escape_assertion(s: &str) -> String {
-    REGEX_ESCAPE.replace(s, "_").to_string()
+    let e = REGEX_ESCAPE.replace_all(s, "$1$2%").to_string();
+    return e.replace("%", "_");
 }
 
 pub fn remove_comments(s: &str) -> &str {
@@ -22,7 +23,6 @@ pub fn remove_comments(s: &str) -> &str {
 
 #[test]
 fn test_escape_assertion() {
-    /*
     assert_eq!(escape_assertion("r.attr.value == p.attr").as_str(), "r_attr.value == p_attr");
     assert_eq!(escape_assertion("r.attp.value || p.attr").as_str(), "r_attp.value || p_attr");
     assert_eq!(escape_assertion("r.attp.value &&p.attr").as_str(), "r_attp.value &&p_attr");
@@ -36,7 +36,6 @@ fn test_escape_assertion() {
     assert_eq!(escape_assertion("g(r.sub, p.sub) == p.attr").as_str(), "g(r_sub, p_sub) == p_attr");
     assert_eq!(escape_assertion("g(r.sub,p.sub) == p.attr").as_str(), "g(r_sub,p_sub) == p_attr");
     assert_eq!(escape_assertion("(r.attp.value || p.attr)p.u").as_str(), "(r_attp.value || p_attr)p_u");
-    */
 }
 
 #[test]
