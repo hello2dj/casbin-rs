@@ -15,20 +15,19 @@ impl Model {
         Ok(())
     }
 
-    pub fn clear_policy(&mut self) -> Result<(), Error> {
+    pub fn clear_policy(&mut self) {
         if let Some(p) = self.data.get_mut("p") {
             p.clear();
         }
         if let Some(g) = self.data.get_mut("g") {
             g.clear();
         }
-        Ok(())
     }
 
     pub fn get_policy(&mut self, sec: &str, ptype: &str) -> Option<Vec<Vec<String>>> {
         if let Some(sec_map) = self.data.get(sec) {
             if let Some(assertion) = sec_map.get(ptype) {
-                Some(assertion.policy.clone()); // FIXME: check if we need a reference, or a copy
+                Some(assertion.policy.clone());
             }
         }
         None
@@ -41,7 +40,29 @@ impl Model {
         field_index: i32,
         field_values: Vec<String>,
     ) -> Option<Vec<Vec<String>>> {
-        unimplemented!()
+        let mut res: Vec<Vec<String>> = Vec::new();
+        if let Some(sec_map) = self.data.get(sec) {
+            if let Some(assertion) = sec_map.get(ptype) {
+                for rules in &assertion.policy {
+                    let mut matched = true;
+                    let i_rules = &rules[field_index as usize..];
+                    for (rule, field_value) in i_rules.iter().zip(&field_values) {
+                        if !field_value.is_empty() && rule != field_value {
+                            matched = false;
+                            break;
+                        }
+                    }
+                    if matched {
+                        res.push(rules.clone());
+                    }
+                }
+            }
+        }
+        if res.is_empty() {
+            None
+        } else {
+            Some(res)
+        }
     }
 
     pub fn has_policy(&self, sec: &str, ptype: &str, rule: &Vec<String>) -> bool {
@@ -97,8 +118,30 @@ impl Model {
         ptype: &str,
         field_index: i32,
         field_values: Vec<String>,
-    ) -> Result<bool, Error> {
-        unimplemented!()
+    ) -> bool {
+        let mut res: bool = false;
+        if let Some(sec_map) = self.data.get_mut(sec) {
+            if let Some(assertion) = sec_map.get_mut(ptype) {
+                let mut tmp: Vec<Vec<String>> = Vec::new();
+                for rules in &assertion.policy {
+                    let mut matched = true;
+                    let i_rules = &rules[field_index as usize..];
+                    for (rule, field_value) in i_rules.iter().zip(&field_values) {
+                        if !field_value.is_empty() && rule != field_value {
+                            matched = false;
+                            break;
+                        }
+                    }
+                    if matched {
+                        res = true;
+                    } else {
+                        tmp.push(rules.clone());
+                    }
+                }
+                assertion.policy = tmp;
+            }
+        }
+        res
     }
 
     pub fn get_values_for_field_in_policy(
@@ -112,7 +155,7 @@ impl Model {
         for (_, sec_map) in &self.data {
             for (_, assertion) in sec_map {
                 for rules in &assertion.policy {
-                    for rule in rules {
+                    if let Some(rule) = rules.get(field_index as usize) {
                         values.push(rule.to_string());
                     }
                 }
