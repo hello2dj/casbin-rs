@@ -7,6 +7,7 @@ use lazy_static::lazy_static;
 use crate::assertion::Assertion;
 use crate::config::Config;
 use crate::error::Error;
+use crate::rbac::RoleManager;
 use crate::util::{escape_assertion, remove_comments};
 
 mod function;
@@ -48,7 +49,7 @@ impl Model {
     pub fn new() -> Self {
         Model { data: HashMap::new() }
     }
-    
+
     /// Create a Model instance from a file.
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         let text = fs::read_to_string(path)?;
@@ -68,7 +69,7 @@ impl Model {
         model.load_section(&cfg, "g")?;
         Ok(model)
     }
-    
+
     fn load_assertion(&mut self, cfg: &Config, sec: &str, key: &str) -> Result<bool, Error> {
         let value = format!("{}::{}", get_section_name(sec), key);
         self.add_def(sec, key, value.as_str())

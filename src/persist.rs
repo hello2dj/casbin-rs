@@ -1,5 +1,6 @@
 use crate::error::Error;
 use crate::model::Model;
+use crate::rbac::RoleManager;
 
 pub mod file_adapter;
 
@@ -37,6 +38,6 @@ pub trait FilteredAdapter: Adapter {
 }
 
 pub trait Watcher {
-    fn set_update_callback<F: FnMut(&str)+'static>(&mut self, callback: F) -> Result<(), Error>;
+    fn set_update_callback<F: FnMut(&str) + 'static>(&mut self, callback: F) -> Result<(), Error>;
     fn update(&self) -> Result<(), Error>;
 }

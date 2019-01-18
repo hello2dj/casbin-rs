@@ -36,7 +36,7 @@ mod tests {
         });
 
         assert_eq!(expr.exec(), Ok(to_value(true)));
-        
+
         let request = cas_obj(&[("sub", "alice"), ("obj", "data1"), ("act", "read")]);
         let policy = cas_obj(&[("sub", "alice"), ("obj", "data1"), ("act", "read"), ("effect", "allow")]);
 
@@ -47,12 +47,10 @@ mod tests {
             .value("p", policy);
         assert_eq!(expr.exec(), Ok(to_value(true)));
 
-
         let policy = cas_obj(&[("sub", "bob"), ("obj", "data1"), ("act", "read"), ("effect", "allow")]);
         let expr = Expr::new("(r.sub == p.sub) && (r.obj == p.obj) && (r.act == p.act)")
             .value("r", request.clone())
             .value("p", policy);
         assert_eq!(expr.exec(), Ok(to_value(false)));
-
     }
 }

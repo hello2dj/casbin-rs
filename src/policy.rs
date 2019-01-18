@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
+use crate::assertion::Assertion;
 use crate::error::Error;
 use crate::model::Model;
 use crate::rbac::RoleManager;
-use crate::assertion::Assertion;
 
 impl Model {
-    pub fn build_role_links(&mut self, role_manager: &mut Box<RoleManager>) -> Result<(), Error> {
+    pub fn build_role_links<RM: RoleManager>(&mut self, role_manager: &mut RM) -> Result<(), Error> {
         if let Some(g) = self.data.get_mut("g") {
             for (name, assertion) in g.iter_mut() {
                 assertion.build_role_links(role_manager)?;
@@ -144,12 +144,7 @@ impl Model {
         res
     }
 
-    pub fn get_values_for_field_in_policy(
-        &self,
-        sec: &str,
-        ptype: &str,
-        field_index: i32,
-    ) -> Vec<String> {
+    pub fn get_values_for_field_in_policy(&self, sec: &str, ptype: &str, field_index: i32) -> Vec<String> {
         let mut values: Vec<String> = Vec::new();
 
         for (_, sec_map) in &self.data {

@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use crate::error::Error;
 use crate::model::Model;
 use crate::persist::{Adapter, Filter, FilteredAdapter};
+use crate::rbac::RoleManager;
 
 pub struct FileAdapter {
     path: PathBuf,

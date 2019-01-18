@@ -18,7 +18,7 @@ impl Assertion {
         }
     }
 
-    pub fn build_role_links(&mut self, role_manager: &mut Box<RoleManager>) -> Result<(), Error> {
+    pub fn build_role_links<RM: RoleManager>(&mut self, role_manager: &mut RM) -> Result<(), Error> {
         let count = self.value.matches("_").count();
         for rule in &self.policy {
             if count < 2 {

@@ -1,33 +1,49 @@
 use std::path::{Path, PathBuf};
 
-use crate::effect::{DefaultEffector, Effector, Effect};
+use crate::effect::{DefaultEffector, Effect, Effector};
 use crate::error::Error;
 use crate::model::Model;
 use crate::model::{get_function_map, FunctionMap};
 use crate::persist::Adapter;
 use crate::rbac::{DefaultRoleManager, RoleManager};
 
+pub struct DefaultEnforcer();
+
+impl DefaultEnforcer {
+    pub fn new<M: AsRef<Path>, A: Adapter>(
+        model: M,
+        policy: A,
+    ) -> Result<Enforcer<A, DefaultRoleManager, DefaultEffector>, Error> {
+        Enforcer::new(model, policy, DefaultRoleManager::new(10), DefaultEffector::new())
+    }
+}
+
 /// Enforcer is the main interface for authorization enforcement and policy management.
-pub struct Enforcer {
+pub struct Enforcer<A: Adapter, RM: RoleManager, E: Effector> {
     model: Model,
     model_path: PathBuf,
     function_map: FunctionMap,
-    adapter: Box<Adapter>,
-    role_manager: Box<RoleManager>,
-    effector: Box<Effector>,
+    adapter: A,
+    role_manager: RM,
+    effector: E,
     auto_build_role_links: bool,
 }
 
-impl Enforcer {
+impl<A: Adapter, RM: RoleManager, E: Effector> Enforcer<A, RM, E> {
     /// Create an instance of an Enforcer from a `model` and `policy`.
-    pub fn new<M: AsRef<Path>, P: 'static + Adapter>(model: M, policy: P) -> Result<Self, Error> {
+    pub fn new<M: AsRef<Path>>(
+        model: M,
+        policy: A,
+        role_manager: RM,
+        effector: E,
+    ) -> Result<Enforcer<A, RM, E>, Error> {
         let mut enforcer = Enforcer {
             model_path: PathBuf::from(model.as_ref()),
             model: Model::from_file(model)?,
             function_map: get_function_map(),
-            adapter: Box::new(policy),
-            role_manager: Box::new(DefaultRoleManager::new(10)),
-            effector: Box::new(DefaultEffector::new()),
+            adapter: policy,
+            role_manager,
+            effector,
             auto_build_role_links: true,
         };
 
@@ -56,7 +72,7 @@ impl Enforcer {
     }
 
     /// Decide whether `subject` can access `object` with the operation `action`.
-    
+
     // TODO: enforce does not handle matcherResults.
     pub fn enforce(&self, subject: &str, object: &str, action: &str) -> Result<bool, Error> {
         let mut policy_effects: Vec<Effect> = vec![];
@@ -67,9 +83,7 @@ impl Enforcer {
 
         Ok(false)
     }
-
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -80,7 +94,8 @@ mod tests {
     #[test]
     fn test_match_in_memory() {
         let adapter = FileAdapter::new("examples/basic_policy.csv", false);
-        let enforcer = Enforcer::new("examples/basic_model.conf", adapter).expect("failed to create instance of Enforcer");
+        let enforcer =
+            DefaultEnforcer::new("examples/basic_model.conf", adapter).expect("failed to create instance of Enforcer");
 
         enforcer.enforce("alice", "data1", "read");
     }
