@@ -32,7 +32,7 @@ impl Filter {
 }
 
 pub trait FilteredAdapter: Adapter {
-    fn load_filtered_policy(&self, model: &mut Model, filter: Filter) -> Result<(), Error>;
+    fn load_filtered_policy(&self, model: &mut Model, filter: Option<&Filter>) -> Result<(), Error>;
     fn is_filtered(&self) -> bool;
 }
 
