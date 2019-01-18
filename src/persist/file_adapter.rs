@@ -6,15 +6,15 @@ use crate::error::Error;
 use crate::model::Model;
 use crate::persist::Adapter;
 
-pub struct FileAdapter{
+pub struct FileAdapter {
     path: PathBuf,
 }
 
 impl FileAdapter {
     /// Create a FileAdapter instance.
     pub fn new<P: AsRef<Path>>(path: P) -> Self {
-        FileAdapter{
-            path: path.as_ref().to_path_buf()
+        FileAdapter {
+            path: path.as_ref().to_path_buf(),
         }
     }
 }
@@ -25,7 +25,7 @@ impl Adapter for FileAdapter {
         let mut file = File::open(&self.path)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
- 
+
         for line in contents.lines() {
             model.load_policy_line(line)?;
         }

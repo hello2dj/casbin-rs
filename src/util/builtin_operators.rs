@@ -1,7 +1,7 @@
 use std::net::Ipv4Addr;
 
-use iprange::IpRange;
 use ipnet::Ipv4Net;
+use iprange::IpRange;
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -19,15 +19,14 @@ pub fn key_match(key1: &str, key2: &str) -> bool {
         } else {
             key1 == &key2[0..i]
         }
-        
     } else {
         key1 == key2
     }
 }
 
 // Determine whether `key1` matches the pattern of key2 (similar to RESTful path),
-// 
-// `key2` can contain a '*' or ':'. For example, "/foo/bar" matches "/foo/*", 
+//
+// `key2` can contain a '*' or ':'. For example, "/foo/bar" matches "/foo/*",
 // "/resource1" matches "/:resource".
 pub fn key_match2(key1: &str, key2: &str) -> bool {
     let mut key2 = key2.replace("/*", "/.*");
@@ -52,7 +51,7 @@ pub fn regex_match(key1: &str, key2: &str) -> bool {
 // TODO: ip_match supports only IPv4 addresses.
 pub fn ip_match(ip1: &str, ip2: &str) -> bool {
     let ip1: Ipv4Addr = ip1.parse().expect(&format!("invalid ip address: {}", ip1));
-    
+
     if let Ok(ip2) = ip2.parse() {
         let mut ip_range: IpRange<Ipv4Net> = IpRange::new();
         ip_range.add(ip2);
@@ -61,7 +60,7 @@ pub fn ip_match(ip1: &str, ip2: &str) -> bool {
 
     // We failed to parse `ip2` as a network, in this case we try to parse it as an IP address.
     let ip2: Ipv4Addr = ip2.parse().expect(&format!("invalid ip address or network: {}", ip2));
-    ip1 == ip2   
+    ip1 == ip2
 }
 
 #[cfg(test)]

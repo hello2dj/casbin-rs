@@ -37,10 +37,10 @@ impl RoleManager for DefaultRoleManager {
     /// `domain` is a prefix to the roles.
     fn delete_link(&mut self, name1: &str, name2: &str, domain: Option<&str>) -> Result<(), Error> {
         let (name1, name2) = DefaultRoleManager::get_names_with_domain(name1, name2, domain);
-        
+
         let role1 = self.get_role(&name1).ok_or(Error::MissingRole(name1.clone()))?;
         let role2 = self.get_role(&name2).ok_or(Error::MissingRole(name2.clone()))?;
-        
+
         role1.borrow_mut().delete_role(role2);
         Ok(())
     }
@@ -48,7 +48,7 @@ impl RoleManager for DefaultRoleManager {
     /// Return true if `name1` inherits the role `name2`.
     fn has_link(&self, name1: &str, name2: &str, domain: Option<&str>) -> bool {
         let (name1, name2) = DefaultRoleManager::get_names_with_domain(name1, name2, domain);
-        
+
         let role1 = match self.get_role(&name1) {
             Some(role) => role,
             None => return false,
@@ -150,7 +150,7 @@ mod tests {
         //          g1    u4    u3
         //         /  \
         //       u1    u2
-    
+
         assert_eq!(manager.has_link("u1", "g1", None), true);
         assert_eq!(manager.has_link("u1", "g2", None), false);
         assert_eq!(manager.has_link("u1", "g3", None), true);
@@ -174,7 +174,7 @@ mod tests {
 
         manager.delete_link("g1", "g3", None).unwrap();
         manager.delete_link("u4", "g2", None).unwrap();
-        
+
         // Current role inheritance tree after deleting the links:
         //             g3    g2
         //               \     \
@@ -193,7 +193,7 @@ mod tests {
         assert_eq!(manager.has_link("u3", "g3", None), false);
         assert_eq!(manager.has_link("u4", "g1", None), false);
         assert_eq!(manager.has_link("u4", "g2", None), false);
-        assert_eq!(manager.has_link("u4", "g3", None)   , true);
+        assert_eq!(manager.has_link("u4", "g3", None), true);
 
         assert_eq!(manager.get_roles("u1", None).unwrap(), ["g1"]);
         assert_eq!(manager.get_roles("u2", None).unwrap(), ["g1"]);

@@ -1,18 +1,17 @@
-
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use std::collections::HashMap;
 
 use lazy_static::lazy_static;
 
-use crate::error::Error;
-use crate::config::Config;
 use crate::assertion::Assertion;
+use crate::config::Config;
+use crate::error::Error;
 use crate::util::{escape_assertion, remove_comments};
 
 mod function;
 
-pub use crate::model::function::{FunctionMap, get_function_map};
+pub use crate::model::function::{get_function_map, FunctionMap};
 
 type AssertionMap = HashMap<String, Assertion>;
 
@@ -58,9 +57,7 @@ impl Model {
         }
 
         if sec == "r" || sec == "p" {
-            assertion.tokens = assertion.value.split(", ").map(|v|
-                format!("{}_{}", key, v)
-            ).collect();
+            assertion.tokens = assertion.value.split(", ").map(|v| format!("{}_{}", key, v)).collect();
         } else {
             assertion.value = escape_assertion(remove_comments(assertion.value.as_str())).to_string();
         }
@@ -78,7 +75,10 @@ impl Model {
 
     fn load_section(&mut self, cfg: &Config, sec: &str) -> Result<(), Error> {
         let mut i = 1;
-        while self.load_assertion(cfg, sec, get_section_value(sec, i).as_str()).unwrap() {
+        while self
+            .load_assertion(cfg, sec, get_section_value(sec, i).as_str())
+            .unwrap()
+        {
             i = i + 1;
         }
         Ok(())
@@ -121,11 +121,11 @@ impl Model {
 
         let key = tokens[0];
         let section = &key[0..1];
-        
+
         if !self.data.contains_key(section) {
             self.data.insert(String::from(section), AssertionMap::new());
         }
-        
+
         let assertion_map = self.data.get_mut(section).unwrap();
 
         if !assertion_map.contains_key(key) {

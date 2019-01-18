@@ -11,12 +11,12 @@ pub trait Effector {
     fn merge_effects(&self, expr: &str, effects: Vec<Effect>, _results: Vec<f64>) -> Result<bool, Error>;
 }
 
-pub struct DefaultEffector{}
+pub struct DefaultEffector {}
 
-impl DefaultEffector{
+impl DefaultEffector {
     /// Create an instance of DefaultEffector
     pub fn new() -> Self {
-        DefaultEffector{}
+        DefaultEffector {}
     }
 }
 

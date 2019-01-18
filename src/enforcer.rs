@@ -1,25 +1,25 @@
 use std::path::{Path, PathBuf};
 
+use crate::effect::{DefaultEffector, Effector};
 use crate::error::Error;
-use crate::effect::{Effector, DefaultEffector};
 use crate::model::Model;
-use crate::model::{FunctionMap, get_function_map};
+use crate::model::{get_function_map, FunctionMap};
 use crate::persist::Adapter;
-use crate::rbac::{RoleManager, DefaultRoleManager};
+use crate::rbac::{DefaultRoleManager, RoleManager};
 
 /// Enforcer is the main interface for authorization enforcement and policy management.
-pub struct Enforcer{
+pub struct Enforcer {
     model: Model,
     model_path: PathBuf,
     function_map: FunctionMap,
     adapter: Box<Adapter>,
     role_manager: Box<RoleManager>,
-    effector: Box<Effector>
+    effector: Box<Effector>,
 }
 
 impl Enforcer {
     pub fn new<P: 'static + Adapter>(model: &Path, policy: P) -> Result<Self, Error> {
-        Ok(Enforcer{
+        Ok(Enforcer {
             model: Model::new(model)?,
             model_path: PathBuf::from(model),
             function_map: get_function_map(),

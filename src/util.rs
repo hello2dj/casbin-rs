@@ -1,4 +1,3 @@
-
 pub mod builtin_operators;
 
 use lazy_static::lazy_static;
@@ -23,19 +22,58 @@ pub fn remove_comments(s: &str) -> &str {
 
 #[test]
 fn test_escape_assertion() {
-    assert_eq!(escape_assertion("r.attr.value == p.attr").as_str(), "r_attr.value == p_attr");
-    assert_eq!(escape_assertion("r.attp.value || p.attr").as_str(), "r_attp.value || p_attr");
-    assert_eq!(escape_assertion("r.attp.value &&p.attr").as_str(), "r_attp.value &&p_attr");
-    assert_eq!(escape_assertion("r.attp.value >p.attr").as_str(), "r_attp.value >p_attr");
-    assert_eq!(escape_assertion("r.attp.value <p.attr").as_str(), "r_attp.value <p_attr");
-    assert_eq!(escape_assertion("r.attp.value +p.attr").as_str(), "r_attp.value +p_attr");
-    assert_eq!(escape_assertion("r.attp.value -p.attr").as_str(), "r_attp.value -p_attr");
-    assert_eq!(escape_assertion("r.attp.value *p.attr").as_str(), "r_attp.value *p_attr");
-    assert_eq!(escape_assertion("r.attp.value /p.attr").as_str(), "r_attp.value /p_attr");
-    assert_eq!(escape_assertion("!r.attp.value /p.attr").as_str(), "!r_attp.value /p_attr");
-    assert_eq!(escape_assertion("g(r.sub, p.sub) == p.attr").as_str(), "g(r_sub, p_sub) == p_attr");
-    assert_eq!(escape_assertion("g(r.sub,p.sub) == p.attr").as_str(), "g(r_sub,p_sub) == p_attr");
-    assert_eq!(escape_assertion("(r.attp.value || p.attr)p.u").as_str(), "(r_attp.value || p_attr)p_u");
+    assert_eq!(
+        escape_assertion("r.attr.value == p.attr").as_str(),
+        "r_attr.value == p_attr"
+    );
+    assert_eq!(
+        escape_assertion("r.attp.value || p.attr").as_str(),
+        "r_attp.value || p_attr"
+    );
+    assert_eq!(
+        escape_assertion("r.attp.value &&p.attr").as_str(),
+        "r_attp.value &&p_attr"
+    );
+    assert_eq!(
+        escape_assertion("r.attp.value >p.attr").as_str(),
+        "r_attp.value >p_attr"
+    );
+    assert_eq!(
+        escape_assertion("r.attp.value <p.attr").as_str(),
+        "r_attp.value <p_attr"
+    );
+    assert_eq!(
+        escape_assertion("r.attp.value +p.attr").as_str(),
+        "r_attp.value +p_attr"
+    );
+    assert_eq!(
+        escape_assertion("r.attp.value -p.attr").as_str(),
+        "r_attp.value -p_attr"
+    );
+    assert_eq!(
+        escape_assertion("r.attp.value *p.attr").as_str(),
+        "r_attp.value *p_attr"
+    );
+    assert_eq!(
+        escape_assertion("r.attp.value /p.attr").as_str(),
+        "r_attp.value /p_attr"
+    );
+    assert_eq!(
+        escape_assertion("!r.attp.value /p.attr").as_str(),
+        "!r_attp.value /p_attr"
+    );
+    assert_eq!(
+        escape_assertion("g(r.sub, p.sub) == p.attr").as_str(),
+        "g(r_sub, p_sub) == p_attr"
+    );
+    assert_eq!(
+        escape_assertion("g(r.sub,p.sub) == p.attr").as_str(),
+        "g(r_sub,p_sub) == p_attr"
+    );
+    assert_eq!(
+        escape_assertion("(r.attp.value || p.attr)p.u").as_str(),
+        "(r_attp.value || p_attr)p_u"
+    );
 }
 
 #[test]
