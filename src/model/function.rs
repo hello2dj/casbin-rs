@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use crate::util::builtin_operators;
 
 pub type Function = Fn(&str, &str) -> bool;
-
 pub type FunctionMap = HashMap<&'static str, Box<Function>>;
 
 pub fn get_function_map() -> FunctionMap {

@@ -66,7 +66,6 @@ pub fn ip_match(ip1: &str, ip2: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use eval::{eval, to_value};
 
     #[test]
     fn test_key_match() {

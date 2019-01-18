@@ -44,12 +44,37 @@ fn get_section_value(sec: &str, i: i32) -> String {
 }
 
 impl Model {
+    /// Create an empty Model instance.
+    pub fn new() -> Self {
+        Model { data: HashMap::new() }
+    }
+    
+    /// Create a Model instance from a file.
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+        let text = fs::read_to_string(path)?;
+        Model::from_string(&text)
+    }
+
+    /// Create a Model instance from a string.
+    pub fn from_string(text: &str) -> Result<Self, Error> {
+        let mut model = Model::new();
+        let cfg = Config::from_string(text)?;
+
+        model.load_section(&cfg, "r")?;
+        model.load_section(&cfg, "p")?;
+        model.load_section(&cfg, "e")?;
+        model.load_section(&cfg, "m")?;
+
+        model.load_section(&cfg, "g")?;
+        Ok(model)
+    }
+    
     fn load_assertion(&mut self, cfg: &Config, sec: &str, key: &str) -> Result<bool, Error> {
         let value = format!("{}::{}", get_section_name(sec), key);
         self.add_def(sec, key, value.as_str())
     }
 
-    fn add_def(&mut self, sec: &str, key: &str, value: &str) -> Result<bool, Error> {
+    pub(crate) fn add_def(&mut self, sec: &str, key: &str, value: &str) -> Result<bool, Error> {
         let mut assertion = Assertion::new();
 
         if assertion.value.is_empty() {
@@ -82,25 +107,6 @@ impl Model {
             i = i + 1;
         }
         Ok(())
-    }
-
-    /// Create a Model instance from a file.
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
-        let text = fs::read_to_string(path)?;
-        Model::from_string(&text)
-    }
-
-    pub fn from_string(text: &str) -> Result<Self, Error> {
-        let mut model = Model { data: HashMap::new() };
-        let cfg = Config::from_string(text)?;
-
-        model.load_section(&cfg, "r")?;
-        model.load_section(&cfg, "p")?;
-        model.load_section(&cfg, "e")?;
-        model.load_section(&cfg, "m")?;
-
-        model.load_section(&cfg, "g")?;
-        Ok(model)
     }
 
     pub fn print_model(&self) -> Result<(), Error> {

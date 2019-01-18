@@ -122,7 +122,7 @@ mod tests {
 
     #[test]
     fn test_load_policy() {
-        let mut model = Model::new("examples/basic_model.conf").expect("failed to load model");
+        let mut model = Model::from_file("examples/basic_model.conf").expect("failed to load model");
         let adapter = FileAdapter::new("examples/basic_policy.csv", false);
         adapter.load_policy(&mut model).expect("failed to load policy");
     }
