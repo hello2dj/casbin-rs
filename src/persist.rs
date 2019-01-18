@@ -16,3 +16,27 @@ pub trait Adapter {
         field_values: Vec<String>,
     ) -> Result<(), Error>;
 }
+
+pub struct Filter {
+    pub p: Vec<String>,
+    pub g: Vec<String>,
+}
+
+impl Filter {
+    pub fn new() -> Self {
+        Filter {
+            p: Vec::new(),
+            g: Vec::new(),
+        }
+    }
+}
+
+pub trait FilteredAdapter: Adapter {
+    fn load_filtered_policy(&self, model: &mut Model, filter: Filter) -> Result<(), Error>;
+    fn is_filtered(&self) -> bool;
+}
+
+pub trait Watcher {
+    fn set_update_callback<F: FnMut(&str)+'static>(&mut self, callback: F) -> Result<(), Error>;
+    fn update(&self) -> Result<(), Error>;
+}
