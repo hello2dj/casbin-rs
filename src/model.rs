@@ -4,7 +4,6 @@ use std::path::Path;
 use std::collections::HashMap;
 
 use lazy_static::lazy_static;
-use regex::Regex;
 
 use crate::error::Error;
 use crate::config::Config;
@@ -15,8 +14,10 @@ mod function;
 
 pub use crate::model::function::{FunctionMap, get_function_map};
 
+type AssertionMap = HashMap<String, Assertion>;
+
 pub struct Model {
-    pub data: HashMap<String, HashMap<String, Assertion>>,
+    pub data: HashMap<String, AssertionMap>,
 }
 
 lazy_static! {
@@ -83,6 +84,7 @@ impl Model {
         Ok(())
     }
 
+    /// Create a Model instance from a file.
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         let text = fs::read_to_string(path)?;
         Model::from_string(&text)
@@ -103,5 +105,42 @@ impl Model {
 
     pub fn print_model(&self) -> Result<(), Error> {
         unimplemented!()
+    }
+
+    /// Load a policy rule from a line of text.
+    pub fn load_policy_line(&mut self, line: &str) -> Result<(), Error> {
+        if line.len() == 0 || line.starts_with("#") {
+            return Ok(());
+        }
+
+        let tokens: Vec<&str> = line.split(',').map(|t| t.trim()).collect();
+
+        if tokens.len() < 2 {
+            return Err(Error::InvalidValue);
+        }
+
+        let key = tokens[0];
+        let section = &key[0..1];
+        
+        if !self.data.contains_key(section) {
+            self.data.insert(String::from(section), AssertionMap::new());
+        }
+        
+        let assertion_map = self.data.get_mut(section).unwrap();
+
+        if !assertion_map.contains_key(key) {
+            assertion_map.insert(key.to_string(), Assertion::new());
+        }
+
+        let assertion = assertion_map.get_mut(key).unwrap();
+        let mut value = vec![];
+
+        for s in &tokens[1..] {
+            value.push(String::from(*s));
+        }
+
+        assertion.policy.push(value);
+
+        Ok(())
     }
 }
