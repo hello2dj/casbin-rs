@@ -18,7 +18,7 @@ pub trait RoleManager {
     fn print_roles(&self) -> Result<(), Error>;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Role {
     pub name: String,
     roles: Vec<Rc<RefCell<Role>>>,

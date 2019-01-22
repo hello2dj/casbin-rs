@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::rbac::RoleManager;
 
+#[derive(Debug)]
 pub struct Assertion {
     pub key: String,
     pub value: String,

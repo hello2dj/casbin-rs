@@ -1,6 +1,6 @@
 use crate::error::Error;
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum Effect {
     Allow,
     Indeterminate,
@@ -11,6 +11,7 @@ pub trait Effector {
     fn merge_effects(&self, expr: &str, effects: Vec<Effect>, _results: Vec<f64>) -> Result<bool, Error>;
 }
 
+#[derive(Debug)]
 pub struct DefaultEffector {}
 
 impl DefaultEffector {

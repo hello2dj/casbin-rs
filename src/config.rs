@@ -16,6 +16,7 @@ lazy_static! {
 }
 
 /// A configuration.
+#[derive(Debug)]
 pub struct Config {
     data: HashMap<String, HashMap<String, String>>,
 }

@@ -1,17 +1,26 @@
 use std::collections::HashMap;
+use std::fmt;
 
 use crate::util::builtin_operators;
 
 pub type Function = Fn(&str, &str) -> bool;
-pub type FunctionMap = HashMap<&'static str, Box<Function>>;
+
+pub struct FunctionMap(pub HashMap<&'static str, Box<Function>>);
+
+impl fmt::Debug for FunctionMap {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "FunctionMap")
+    }
+}
+
 
 pub fn get_function_map() -> FunctionMap {
-    let mut map = FunctionMap::new();
+    let mut map = FunctionMap(HashMap::new());
 
-    map.insert("keyMatch", Box::new(builtin_operators::key_match));
-    map.insert("keyMatch2", Box::new(builtin_operators::key_match2));
-    map.insert("regexMatch", Box::new(builtin_operators::regex_match));
-    map.insert("ipMatch", Box::new(builtin_operators::ip_match));
+    map.0.insert("keyMatch", Box::new(builtin_operators::key_match));
+    map.0.insert("keyMatch2", Box::new(builtin_operators::key_match2));
+    map.0.insert("regexMatch", Box::new(builtin_operators::regex_match));
+    map.0.insert("ipMatch", Box::new(builtin_operators::ip_match));
 
     map
 }

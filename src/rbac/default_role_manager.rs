@@ -7,6 +7,7 @@ use std::rc::Rc;
 use crate::error::Error;
 use crate::rbac::{Role, RoleManager};
 
+#[derive(Debug)]
 pub struct DefaultRoleManager {
     all_roles: HashMap<String, Rc<RefCell<Role>>>,
     max_hierarchy_level: i32,

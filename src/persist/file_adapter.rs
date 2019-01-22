@@ -7,6 +7,7 @@ use crate::model::Model;
 use crate::persist::{Adapter, Filter, FilteredAdapter};
 use crate::rbac::RoleManager;
 
+#[derive(Debug)]
 pub struct FileAdapter {
     path: PathBuf,
     filtered: bool,

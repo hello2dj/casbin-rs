@@ -16,6 +16,7 @@ pub use crate::model::function::{get_function_map, FunctionMap};
 
 type AssertionMap = HashMap<String, Assertion>;
 
+#[derive(Debug)]
 pub struct Model {
     pub data: HashMap<String, AssertionMap>,
 }

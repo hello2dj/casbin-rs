@@ -7,6 +7,7 @@ use crate::model::{get_function_map, FunctionMap};
 use crate::persist::Adapter;
 use crate::rbac::{DefaultRoleManager, RoleManager};
 
+#[derive(Debug)]
 pub struct DefaultEnforcer();
 
 impl DefaultEnforcer {
@@ -19,6 +20,7 @@ impl DefaultEnforcer {
 }
 
 /// Enforcer is the main interface for authorization enforcement and policy management.
+#[derive(Debug)]
 pub struct Enforcer<A: Adapter, RM: RoleManager, E: Effector> {
     model: Model,
     model_path: PathBuf,
