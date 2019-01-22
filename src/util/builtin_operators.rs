@@ -13,7 +13,7 @@ lazy_static! {
 ///
 /// `key2` can contain a *. For example, "/foo/bar" matches "/foo/*"
 pub fn key_match(key1: &str, key2: &str) -> bool {
-    if let Some(i) = key2.find("*") {
+    if let Some(i) = key2.find('*') {
         if key1.len() > i {
             key1[0..i] == key2[0..i]
         } else {

@@ -20,7 +20,7 @@ impl Assertion {
     }
 
     pub fn build_role_links<RM: RoleManager>(&mut self, role_manager: &mut RM) -> Result<(), Error> {
-        let count = self.value.matches("_").count();
+        let count = self.value.matches('_').count();
         for rule in &self.policy {
             if count < 2 {
                 // the number of '_' characters in a role definition must be at least 2

@@ -23,16 +23,13 @@ impl DefaultEffector {
 
 impl Effector for DefaultEffector {
     fn merge_effects(&self, expr: &str, effects: Vec<Effect>, _results: Vec<f64>) -> Result<bool, Error> {
-        match expr.as_ref() {
+        match expr {
             "some(where (p_eft == allow))" => {
                 let mut result = false;
                 for eft in effects {
-                    match eft {
-                        Effect::Allow => {
-                            result = true;
-                            break;
-                        }
-                        _ => {}
+                    if eft == Effect::Allow {
+                        result = true;
+                        break;
                     }
                 }
                 Ok(result)
@@ -40,12 +37,9 @@ impl Effector for DefaultEffector {
             "!some(where (p_eft == deny))" => {
                 let mut result = true;
                 for eft in effects {
-                    match eft {
-                        Effect::Deny => {
-                            result = false;
-                            break;
-                        }
-                        _ => {}
+                    if eft == Effect::Deny {
+                        result = false;
+                        break;
                     }
                 }
                 Ok(result)

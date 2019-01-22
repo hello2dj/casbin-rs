@@ -5,7 +5,6 @@ use std::path::{Path, PathBuf};
 use crate::error::Error;
 use crate::model::Model;
 use crate::persist::{Adapter, Filter, FilteredAdapter};
-use crate::rbac::RoleManager;
 
 #[derive(Debug)]
 pub struct FileAdapter {
@@ -108,6 +107,7 @@ fn filter_words(line: Vec<String>, filter: &Vec<String>) -> bool {
     if line.len() < filter.len() + 1 {
         return true;
     }
+
     let mut skip_line = false;
     for (i, v) in filter.iter().enumerate() {
         if v.len() > 0 && v.trim() != line[i + 1].trim() {
@@ -115,7 +115,8 @@ fn filter_words(line: Vec<String>, filter: &Vec<String>) -> bool {
             break;
         }
     }
-    return skip_line;
+
+    skip_line
 }
 
 #[cfg(test)]

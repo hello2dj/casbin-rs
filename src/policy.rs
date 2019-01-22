@@ -94,9 +94,10 @@ impl Model {
             let assertion = sec_map.get_mut(ptype).unwrap();
             assertion.policy.push(rule);
 
-            true;
+            true
+        } else {
+            false
         }
-        false
     }
 
     pub fn remove_policy(&mut self, sec: &str, ptype: &str, rule: Vec<String>) -> bool {
@@ -147,8 +148,8 @@ impl Model {
     pub fn get_values_for_field_in_policy(&self, sec: &str, ptype: &str, field_index: i32) -> Vec<String> {
         let mut values: Vec<String> = Vec::new();
 
-        for (_, sec_map) in &self.data {
-            for (_, assertion) in sec_map {
+        for sec_map in self.data.values() {
+            for assertion in sec_map.values() {
                 for rules in &assertion.policy {
                     if let Some(rule) = rules.get(field_index as usize) {
                         values.push(rule.to_string());
@@ -159,7 +160,6 @@ impl Model {
 
         values.sort();
         values.dedup();
-
-        return values;
+        values
     }
 }

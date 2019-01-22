@@ -9,14 +9,14 @@ lazy_static! {
 
 pub fn escape_assertion(s: &str) -> String {
     let e = REGEX_ESCAPE.replace_all(s, "$1$2%").to_string();
-    return e.replace("%", "_");
+    e.replace("%", "_")
 }
 
 pub fn remove_comments(s: &str) -> &str {
-    if let Some(pos) = s.find("#") {
-        return &s[0..pos].trim();
+    if let Some(pos) = s.find('#') {
+        &s[0..pos].trim()
     } else {
-        return s;
+        s
     }
 }
 

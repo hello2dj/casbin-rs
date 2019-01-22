@@ -1,5 +1,3 @@
-use std::path::{Path, PathBuf};
-
 use eval::{to_value, Expr};
 
 use crate::effect::{DefaultEffector, Effect, Effector};
@@ -13,10 +11,7 @@ use crate::rbac::{DefaultRoleManager, RoleManager};
 pub struct DefaultEnforcer();
 
 impl DefaultEnforcer {
-    pub fn new<A: Adapter>(
-        model: Model,
-        policy: A,
-    ) -> Result<Enforcer<A, DefaultRoleManager, DefaultEffector>, Error> {
+    pub fn new<A: Adapter>(model: Model, policy: A) -> Result<Enforcer<A, DefaultRoleManager, DefaultEffector>, Error> {
         Enforcer::new(model, policy, DefaultRoleManager::new(10), DefaultEffector::new())
     }
 }
@@ -34,12 +29,7 @@ pub struct Enforcer<A: Adapter, RM: RoleManager, E: Effector> {
 
 impl<A: Adapter, RM: RoleManager, E: Effector> Enforcer<A, RM, E> {
     /// Create an instance of an Enforcer from a `model` and `policy`.
-    pub fn new(
-        model: Model,
-        policy: A,
-        role_manager: RM,
-        effector: E,
-    ) -> Result<Enforcer<A, RM, E>, Error> {
+    pub fn new(model: Model, policy: A, role_manager: RM, effector: E) -> Result<Enforcer<A, RM, E>, Error> {
         let mut enforcer = Enforcer {
             model,
             function_map: get_function_map(),
@@ -79,8 +69,7 @@ impl<A: Adapter, RM: RoleManager, E: Effector> Enforcer<A, RM, E> {
     pub fn enforce(&self, subject: &str, object: &str, action: &str) -> Result<bool, Error> {
         let mut policy_effects: Vec<Effect> = vec![];
 
-        let expr_string = &self.model.data.get("m").unwrap().get("m").unwrap().value;
-        let expr = Expr::new(expr_string.clone());
+        let expr_string = &self.model.data["m"]["m"].value;
 
         for policy in &self.model.data["p"]["p"].policy {
             let expr = Expr::new(expr_string.clone())
@@ -91,9 +80,9 @@ impl<A: Adapter, RM: RoleManager, E: Effector> Enforcer<A, RM, E> {
                 .value("p_obj", &policy[1])
                 .value("p_act", &policy[2]);
 
-            let result = expr.exec().map_err(|e| Error::Eval(e))?;
-            
-            if (result == to_value(false)) {
+            let result = expr.exec().map_err(Error::Eval)?;
+
+            if result == to_value(false) {
                 policy_effects.push(Effect::Indeterminate);
                 continue;
             }
@@ -102,7 +91,7 @@ impl<A: Adapter, RM: RoleManager, E: Effector> Enforcer<A, RM, E> {
             policy_effects.push(Effect::Allow);
         }
 
-        let effect_expr = &self.model.data.get("e").unwrap().get("e").unwrap().value;
+        let effect_expr = &self.model.data["e"]["e"].value;
         self.effector.merge_effects(effect_expr, policy_effects, vec![])
     }
 }
@@ -118,14 +107,18 @@ mod tests {
         let mut model = Model::new();
 
         assert_eq!(model.add_def("r", "r", "sub, obj, act").unwrap(), true);
-	    assert_eq!(model.add_def("p", "p", "sub, obj, act").unwrap(), true);
-	    assert_eq!(model.add_def("e", "e", "some(where (p.eft == allow))").unwrap(), true);
-	    assert_eq!(model.add_def("m", "m", "(r.sub == p.sub) && (r.obj == p.obj) && (r.act == p.act)").unwrap(), true);
+        assert_eq!(model.add_def("p", "p", "sub, obj, act").unwrap(), true);
+        assert_eq!(model.add_def("e", "e", "some(where (p.eft == allow))").unwrap(), true);
+        assert_eq!(
+            model
+                .add_def("m", "m", "(r.sub == p.sub) && (r.obj == p.obj) && (r.act == p.act)")
+                .unwrap(),
+            true
+        );
 
         let adapter = FileAdapter::new("examples/basic_policy.csv", false);
-        let enforcer =
-            DefaultEnforcer::new(model, adapter).expect("failed to create instance of Enforcer");
-        
+        let enforcer = DefaultEnforcer::new(model, adapter).expect("failed to create instance of Enforcer");
+
         assert_eq!(enforcer.enforce("alice", "data1", "read").unwrap(), true);
         assert_eq!(enforcer.enforce("alice", "data2", "read").unwrap(), false);
         assert_eq!(enforcer.enforce("bob", "data2", "write").unwrap(), true);

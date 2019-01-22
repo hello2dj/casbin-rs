@@ -1,6 +1,5 @@
 use crate::error::Error;
 use crate::model::Model;
-use crate::rbac::RoleManager;
 
 pub mod file_adapter;
 

@@ -16,7 +16,8 @@ pub struct DefaultRoleManager {
 impl RoleManager for DefaultRoleManager {
     /// Clear all stored data and reset the role manager to the initial state.
     fn clear(&mut self) -> Result<(), Error> {
-        Ok(self.all_roles.clear())
+        self.all_roles.clear();
+        Ok(())
     }
 
     /// Add a link such that `name1` inherits the role `name2`.
@@ -90,7 +91,7 @@ impl DefaultRoleManager {
     pub fn new(max_hierarchy_level: i32) -> Self {
         DefaultRoleManager {
             all_roles: HashMap::new(),
-            max_hierarchy_level: max_hierarchy_level,
+            max_hierarchy_level,
         }
     }
 
@@ -109,11 +110,7 @@ impl DefaultRoleManager {
     }
 
     fn get_role(&self, name: &str) -> Option<Rc<RefCell<Role>>> {
-        if self.has_role(name) {
-            Some(Rc::clone(self.all_roles.get(name).unwrap()))
-        } else {
-            None
-        }
+        Some(Rc::clone(self.all_roles.get(name)?))
     }
 
     fn get_name_with_domain(name: &str, domain: Option<&str>) -> String {

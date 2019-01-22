@@ -13,7 +13,6 @@ impl fmt::Debug for FunctionMap {
     }
 }
 
-
 pub fn get_function_map() -> FunctionMap {
     let mut map = FunctionMap(HashMap::new());
 

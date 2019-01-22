@@ -7,7 +7,6 @@ use lazy_static::lazy_static;
 use crate::assertion::Assertion;
 use crate::config::Config;
 use crate::error::Error;
-use crate::rbac::RoleManager;
 use crate::util::{escape_assertion, remove_comments};
 
 mod function;
@@ -112,7 +111,7 @@ impl Model {
             .load_assertion(cfg, sec, get_section_value(sec, i).as_str())
             .unwrap()
         {
-            i = i + 1;
+            i += 1;
         }
         Ok(())
     }
@@ -123,7 +122,7 @@ impl Model {
 
     /// Load a policy rule from a line of text.
     pub fn load_policy_line(&mut self, line: &str) -> Result<(), Error> {
-        if line.len() == 0 || line.starts_with("#") {
+        if line.is_empty() || line.starts_with('#') {
             return Ok(());
         }
 

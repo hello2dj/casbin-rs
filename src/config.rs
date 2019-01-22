@@ -9,7 +9,7 @@ use regex::Regex;
 
 use crate::error::Error;
 
-const DEFAULT_SECTION: &'static str = "default";
+const DEFAULT_SECTION: &str = "default";
 
 lazy_static! {
     static ref REGEX_CONFIG: Regex = Regex::new(r"^\s*([\w\.]+)\s*=\s*(.+)\s*$").unwrap();
