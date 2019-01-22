@@ -6,6 +6,7 @@ use crate::model::Model;
 use crate::model::{get_function_map, FunctionMap};
 use crate::persist::Adapter;
 use crate::rbac::{DefaultRoleManager, RoleManager};
+use crate::util::builtin_operators;
 
 #[derive(Debug)]
 pub struct DefaultEnforcer();
@@ -78,7 +79,19 @@ impl<A: Adapter, RM: RoleManager, E: Effector> Enforcer<A, RM, E> {
                 .value("r_act", action)
                 .value("p_sub", &policy[0])
                 .value("p_obj", &policy[1])
-                .value("p_act", &policy[2]);
+                .value("p_act", &policy[2])
+                .function("keyMatch", |v| {
+                    Ok(to_value(builtin_operators::key_match(
+                        v[0].as_str().unwrap(),
+                        v[1].as_str().unwrap(),
+                    )))
+                })
+                .function("regexMatch", |v| {
+                    Ok(to_value(builtin_operators::regex_match(
+                        v[0].as_str().unwrap(),
+                        v[1].as_str().unwrap(),
+                    )))
+                });
 
             let result = expr.exec().map_err(Error::Eval)?;
 
