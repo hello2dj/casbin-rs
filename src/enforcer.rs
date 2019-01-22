@@ -6,6 +6,7 @@ use crate::model::Model;
 use crate::model::{get_function_map, FunctionMap};
 use crate::persist::Adapter;
 use crate::rbac::{DefaultRoleManager, RoleManager};
+use crate::util::builtin_operators;
 
 #[derive(Debug)]
 pub struct DefaultEnforcer();
@@ -78,7 +79,31 @@ impl<A: Adapter, RM: RoleManager, E: Effector> Enforcer<A, RM, E> {
                 .value("r_act", action)
                 .value("p_sub", &policy[0])
                 .value("p_obj", &policy[1])
-                .value("p_act", &policy[2]);
+                .value("p_act", &policy[2])
+                .function("keyMatch", |v| {
+                    Ok(to_value(builtin_operators::key_match(
+                        v[0].as_str().unwrap(),
+                        v[1].as_str().unwrap(),
+                    )))
+                })
+                .function("keyMatch2", |v| {
+                    Ok(to_value(builtin_operators::key_match2(
+                        v[0].as_str().unwrap(),
+                        v[1].as_str().unwrap(),
+                    )))
+                })
+                .function("ipMatch", |v| {
+                    Ok(to_value(builtin_operators::ip_match(
+                        v[0].as_str().unwrap(),
+                        v[1].as_str().unwrap(),
+                    )))
+                })
+                .function("regexMatch", |v| {
+                    Ok(to_value(builtin_operators::regex_match(
+                        v[0].as_str().unwrap(),
+                        v[1].as_str().unwrap(),
+                    )))
+                });
 
             let result = expr.exec().map_err(Error::Eval)?;
 
@@ -123,5 +148,45 @@ mod tests {
         assert_eq!(enforcer.enforce("alice", "data2", "read").unwrap(), false);
         assert_eq!(enforcer.enforce("bob", "data2", "write").unwrap(), true);
         assert_eq!(enforcer.enforce("bob", "data2", "read").unwrap(), false);
+    }
+
+    #[test]
+    fn test_key_match_in_memory() {
+        let mut model = Model::new();
+        assert_eq!(model.add_def("r", "r", "sub, obj, act").unwrap(), true);
+        assert_eq!(model.add_def("p", "p", "sub, obj, act").unwrap(), true);
+        assert_eq!(model.add_def("e", "e", "some(where (p.eft == allow))").unwrap(), true);
+        assert_eq!(
+            model
+                .add_def("m", "m", "(r.sub == p.sub) && keyMatch(r.obj, p.obj) && regexMatch(r.act, p.act)")
+                .unwrap(),
+            true
+        );
+
+        let adapter = FileAdapter::new("examples/keymatch_policy.csv", false);
+        let enforcer = DefaultEnforcer::new(model, adapter).expect("failed to create instance of Enforcer");
+
+        assert_eq!(enforcer.enforce("alice", "/alice_data/resource1", "GET").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "/alice_data/resource1", "POST").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "/alice_data/resource2", "GET").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "/alice_data/resource2", "POST").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "/bob_data/resource1", "GET").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "/bob_data/resource1", "POST").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "/bob_data/resource2", "GET").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "/bob_data/resource2", "POST").unwrap(), false);
+
+        assert_eq!(enforcer.enforce("bob", "/alice_data/resource1", "GET").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "/alice_data/resource1", "POST").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "/alice_data/resource2", "GET").unwrap(), true);
+        assert_eq!(enforcer.enforce("bob", "/alice_data/resource2", "POST").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "/bob_data/resource1", "GET").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "/bob_data/resource1", "POST").unwrap(), true);
+        assert_eq!(enforcer.enforce("bob", "/bob_data/resource2", "GET").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "/bob_data/resource2", "POST").unwrap(), true);
+
+        assert_eq!(enforcer.enforce("cathy", "/cathy_data", "GET").unwrap(), true);
+        assert_eq!(enforcer.enforce("cathy", "/cathy_data", "POST").unwrap(), true);
+        assert_eq!(enforcer.enforce("cathy", "/cathy_data", "DELETE").unwrap(), false);
+
     }
 }
