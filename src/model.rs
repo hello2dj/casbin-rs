@@ -66,22 +66,28 @@ impl Model {
         model.load_section(&cfg, "p")?;
         model.load_section(&cfg, "e")?;
         model.load_section(&cfg, "m")?;
-
         model.load_section(&cfg, "g")?;
+
         Ok(model)
     }
 
     fn load_assertion(&mut self, cfg: &Config, sec: &str, key: &str) -> Result<bool, Error> {
-        let value = format!("{}::{}", get_section_name(sec), key);
-        self.add_def(sec, key, value.as_str())
+        if let Some(value) = cfg.string(key, Some(sec)) {
+            self.add_def(sec, key, value.as_str())
+        } else {
+            Ok(false)
+        }
     }
 
     pub(crate) fn add_def(&mut self, sec: &str, key: &str, value: &str) -> Result<bool, Error> {
         let mut assertion = Assertion::new();
 
-        if assertion.value.is_empty() {
+        if value == "" {
             return Ok(false);
         }
+
+        assertion.key = key.to_string();
+        assertion.value = value.to_string();
 
         if sec == "r" || sec == "p" {
             assertion.tokens = assertion.value.split(", ").map(|v| format!("{}_{}", key, v)).collect();

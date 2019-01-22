@@ -1,5 +1,7 @@
 use std::path::{Path, PathBuf};
 
+use eval::{to_value, Expr};
+
 use crate::effect::{DefaultEffector, Effect, Effector};
 use crate::error::Error;
 use crate::model::Model;
@@ -11,8 +13,8 @@ use crate::rbac::{DefaultRoleManager, RoleManager};
 pub struct DefaultEnforcer();
 
 impl DefaultEnforcer {
-    pub fn new<M: AsRef<Path>, A: Adapter>(
-        model: M,
+    pub fn new<A: Adapter>(
+        model: Model,
         policy: A,
     ) -> Result<Enforcer<A, DefaultRoleManager, DefaultEffector>, Error> {
         Enforcer::new(model, policy, DefaultRoleManager::new(10), DefaultEffector::new())
@@ -23,7 +25,6 @@ impl DefaultEnforcer {
 #[derive(Debug)]
 pub struct Enforcer<A: Adapter, RM: RoleManager, E: Effector> {
     model: Model,
-    model_path: PathBuf,
     function_map: FunctionMap,
     adapter: A,
     role_manager: RM,
@@ -33,15 +34,14 @@ pub struct Enforcer<A: Adapter, RM: RoleManager, E: Effector> {
 
 impl<A: Adapter, RM: RoleManager, E: Effector> Enforcer<A, RM, E> {
     /// Create an instance of an Enforcer from a `model` and `policy`.
-    pub fn new<M: AsRef<Path>>(
-        model: M,
+    pub fn new(
+        model: Model,
         policy: A,
         role_manager: RM,
         effector: E,
     ) -> Result<Enforcer<A, RM, E>, Error> {
         let mut enforcer = Enforcer {
-            model_path: PathBuf::from(model.as_ref()),
-            model: Model::from_file(model)?,
+            model,
             function_map: get_function_map(),
             adapter: policy,
             role_manager,
@@ -79,11 +79,31 @@ impl<A: Adapter, RM: RoleManager, E: Effector> Enforcer<A, RM, E> {
     pub fn enforce(&self, subject: &str, object: &str, action: &str) -> Result<bool, Error> {
         let mut policy_effects: Vec<Effect> = vec![];
 
+        let expr_string = &self.model.data.get("m").unwrap().get("m").unwrap().value;
+        let expr = Expr::new(expr_string.clone());
+
         for policy in &self.model.data["p"]["p"].policy {
-            dbg!(policy);
+            let expr = Expr::new(expr_string.clone())
+                .value("r_sub", subject)
+                .value("r_obj", object)
+                .value("r_act", action)
+                .value("p_sub", &policy[0])
+                .value("p_obj", &policy[1])
+                .value("p_act", &policy[2]);
+
+            let result = expr.exec().map_err(|e| Error::Eval(e))?;
+            
+            if (result == to_value(false)) {
+                policy_effects.push(Effect::Indeterminate);
+                continue;
+            }
+
+            // TODO(sduquette): Assuming that the effect of rules is Allow for now.
+            policy_effects.push(Effect::Allow);
         }
 
-        Ok(false)
+        let effect_expr = &self.model.data.get("e").unwrap().get("e").unwrap().value;
+        self.effector.merge_effects(effect_expr, policy_effects, vec![])
     }
 }
 
@@ -95,10 +115,20 @@ mod tests {
 
     #[test]
     fn test_match_in_memory() {
+        let mut model = Model::new();
+
+        assert_eq!(model.add_def("r", "r", "sub, obj, act").unwrap(), true);
+	    assert_eq!(model.add_def("p", "p", "sub, obj, act").unwrap(), true);
+	    assert_eq!(model.add_def("e", "e", "some(where (p.eft == allow))").unwrap(), true);
+	    assert_eq!(model.add_def("m", "m", "(r.sub == p.sub) && (r.obj == p.obj) && (r.act == p.act)").unwrap(), true);
+
         let adapter = FileAdapter::new("examples/basic_policy.csv", false);
         let enforcer =
-            DefaultEnforcer::new("examples/basic_model.conf", adapter).expect("failed to create instance of Enforcer");
-
-        enforcer.enforce("alice", "data1", "read");
+            DefaultEnforcer::new(model, adapter).expect("failed to create instance of Enforcer");
+        
+        assert_eq!(enforcer.enforce("alice", "data1", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "data2", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data2", "write").unwrap(), true);
+        assert_eq!(enforcer.enforce("bob", "data2", "read").unwrap(), false);
     }
 }

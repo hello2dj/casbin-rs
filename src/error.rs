@@ -10,11 +10,18 @@ pub enum Error {
     MissingKey,
     InvalidValue,
     MissingRole(String),
+    Eval(eval::Error),
 }
 
 impl From<io::Error> for Error {
     fn from(error: io::Error) -> Self {
         Error::Io(error)
+    }
+}
+
+impl From<eval::Error> for Error {
+    fn from(error: eval::Error) -> Self {
+        Error::Eval(error)
     }
 }
 
@@ -27,6 +34,7 @@ impl fmt::Display for Error {
             Error::MissingKey => write!(f, "Missing key in configuration"),
             Error::InvalidValue => write!(f, "Invalid value in configuration"),
             Error::MissingRole(ref name) => write!(f, "Missing role {}", name),
+            Error::Eval(ref err) => write!(f, "Evaluation error: {}", err),
         }
     }
 }
