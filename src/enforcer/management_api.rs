@@ -151,18 +151,97 @@ impl<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> Enforcer<A, RM, 
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::error::Error;
 
     use crate::enforcer::DefaultEnforcer;
     use crate::model::Model;
     use crate::persist::file_adapter::FileAdapter;
 
     #[test]
-    #[ignore]
-    // TODO(sduquette): This test is currently failing.
     fn test_get_policy_api() {
         let model = Model::from_file("examples/rbac_model.conf").expect("failed to load model");
         let adapter = FileAdapter::new("examples/rbac_policy.csv", false);
         let enforcer = DefaultEnforcer::new(model, adapter).expect("failed to create instance of Enforcer");
+
+        assert_eq!(
+            enforcer.get_policy(),
+            [
+                ["alice", "data1", "read"],
+                ["bob", "data2", "write"],
+                ["data2_admin", "data2", "read"],
+                ["data2_admin", "data2", "write"]
+            ]
+        );
+
+        assert_eq!(enforcer.has_policy(&["alice", "data1", "read"]), true);
+        assert_eq!(enforcer.has_policy(&["bob", "data2", "write"]), true);
+        assert_eq!(enforcer.has_policy(&["alice", "data2", "read"]), false);
+        assert_eq!(enforcer.has_policy(&["bob", "data3", "write"]), false);
+
+        assert_eq!(enforcer.get_grouping_policy(),
+        [
+            ["alice", "data2_admin"]
+        ]);
+
+        assert_eq!(enforcer.has_grouping_policy(&["alice", "data2_admin"]), true);
+        assert_eq!(enforcer.has_grouping_policy(&["bob", "data2_admin"]), false);
+    }
+
+    #[test]
+    fn test_modify_policy_api() {
+        let model = Model::from_file("examples/rbac_model.conf").expect("failed to load model");
+        let adapter = FileAdapter::new("examples/rbac_policy.csv", false);
+        let mut enforcer = DefaultEnforcer::new(model, adapter).expect("failed to create instance of Enforcer");
+
+        assert_eq!(
+            enforcer.get_policy(),
+            [
+                ["alice", "data1", "read"],
+                ["bob", "data2", "write"],
+                ["data2_admin", "data2", "read"],
+                ["data2_admin", "data2", "write"]
+            ]
+        );
+
+        assert_eq!(enforcer.remove_policy(&["alice", "data1", "read"]), true);
+        assert_eq!(enforcer.remove_policy(&["bob", "data2", "write"]), true);
+        assert_eq!(enforcer.add_policy(&["eve", "data3", "read"]), true);
+
+        assert_eq!(enforcer.remove_named_policy("p", &["eve", "data3", "read"]), true);
+        assert_eq!(enforcer.add_named_policy("p", &["eve", "data3", "read"]), true);
+
+        assert_eq!(
+            enforcer.get_policy(),
+            [
+                ["data2_admin", "data2", "read"],
+                ["data2_admin", "data2", "write"],
+                ["eve", "data3", "read"]
+            ]
+        );
+    }
+
+     #[test]
+    fn test_modify_grouping_policy_api() {
+        let model = Model::from_file("examples/rbac_model.conf").expect("failed to load model");
+        let adapter = FileAdapter::new("examples/rbac_policy.csv", false);
+        let mut enforcer = DefaultEnforcer::new(model, adapter).expect("failed to create instance of Enforcer");
+
+        assert_eq!(enforcer.get_roles_for_user("alice", None), ["data2_admin"]);
+        assert_eq!(enforcer.get_roles_for_user("bob", None), Vec::<String>::new());
+        assert_eq!(enforcer.get_roles_for_user("eve", None), Vec::<String>::new());
+        assert_eq!(enforcer.get_roles_for_user("non_exist", None), Vec::<String>::new());
+
+        enforcer.remove_grouping_policy(&["alice", "data2_admin"]);
+        enforcer.add_grouping_policy(&["bob", "data1_admin"]);
+        enforcer.add_grouping_policy(&["eve", "data3_admin"]);
+
+        assert_eq!(enforcer.get_roles_for_user("alice", None), Vec::<String>::new());
+        assert_eq!(enforcer.get_roles_for_user("bob", None), ["data1_admin"]);
+        assert_eq!(enforcer.get_roles_for_user("eve", None), ["data3_admin"]);
+        assert_eq!(enforcer.get_roles_for_user("non_exist", None), Vec::<String>::new());
+
+        assert_eq!(enforcer.get_users_for_role("data1_admin", None), ["bob"]);
+        assert_eq!(enforcer.get_users_for_role("data2_admin", None), Vec::<String>::new());
+        assert_eq!(enforcer.get_users_for_role("data3_admin", None), ["eve"]);
     }
 }

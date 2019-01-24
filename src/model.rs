@@ -45,6 +45,17 @@ fn get_section_value(sec: &str, i: i32) -> String {
     }
 }
 
+fn shorthand_section_name(name: &str) -> Option<&str> {
+    match name {
+        "request_definition" => Some("r"),
+        "policy_definition" => Some("p"),
+        "role_definition" => Some("g"),
+        "policy_effect" => Some("e"),
+        "matchers" => Some("m"),
+        _ => None,
+    }
+}
+
 impl Model {
     /// Create an empty Model instance.
     pub fn new() -> Self {
@@ -62,18 +73,18 @@ impl Model {
         let mut model = Model::new();
         let cfg = Config::from_string(text)?;
 
-        model.load_section(&cfg, "r")?;
-        model.load_section(&cfg, "p")?;
-        model.load_section(&cfg, "e")?;
-        model.load_section(&cfg, "m")?;
-        model.load_section(&cfg, "g")?;
+        model.load_section(&cfg, "request_definition")?;
+        model.load_section(&cfg, "policy_definition")?;
+        model.load_section(&cfg, "policy_effect")?;
+        model.load_section(&cfg, "matchers")?;
+        model.load_section(&cfg, "role_definition")?;
 
         Ok(model)
     }
 
     fn load_assertion(&mut self, cfg: &Config, sec: &str, key: &str) -> Result<bool, Error> {
         if let Some(value) = cfg.string(key, Some(sec)) {
-            self.add_def(sec, key, value.as_str())
+            self.add_def(shorthand_section_name(sec).unwrap(), key, value.as_str())
         } else {
             Ok(false)
         }
@@ -106,10 +117,14 @@ impl Model {
         Ok(true)
     }
 
-    fn load_section(&mut self, cfg: &Config, sec: &str) -> Result<(), Error> {
+    fn load_section(&mut self, cfg: &Config, section: &str) -> Result<(), Error> {
         let mut i = 1;
         while self
-            .load_assertion(cfg, sec, get_section_value(sec, i).as_str())
+            .load_assertion(
+                cfg,
+                section,
+                get_section_value(shorthand_section_name(section).unwrap(), i).as_str(),
+            )
             .unwrap()
         {
             i += 1;

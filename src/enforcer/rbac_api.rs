@@ -1,25 +1,23 @@
 use crate::effect::Effector;
 use crate::enforcer::Enforcer;
-use crate::error::Error;
 use crate::persist::Adapter;
 use crate::rbac::RoleManager;
 
 impl<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> Enforcer<A, RM, E> {
     /// Get the list of roles for `user`.
-    pub fn get_roles_for_user(&self, user: &str, domain: Option<&str>) -> Result<Vec<String>, Error> {
+    pub fn get_roles_for_user(&self, user: &str, domain: Option<&str>) -> Vec<String> {
         self.role_manager.lock().unwrap().get_roles(user, domain)
     }
 
     /// Get the list users that have the speficied `role`.
-    pub fn get_users_for_role(&self, role: &str, domain: Option<&str>) -> Result<Vec<String>, Error> {
+    pub fn get_users_for_role(&self, role: &str, domain: Option<&str>) -> Vec<String> {
         self.role_manager.lock().unwrap().get_users(role, domain)
     }
 
     /// Returns true if `user` has the specified `role`.
-    pub fn has_role_for_user(&self, user: &str, role: &str, domain: Option<&str>) -> Result<bool, Error> {
-        let roles = self.get_roles_for_user(user, domain)?;
-        let result = roles.iter().any(|r| r == role);
-        Ok(result)
+    pub fn has_role_for_user(&self, user: &str, role: &str, domain: Option<&str>) -> bool {
+        let roles = self.get_roles_for_user(user, domain);
+        roles.iter().any(|r| r == role)
     }
 
     /// Add a `role` for a `user`.

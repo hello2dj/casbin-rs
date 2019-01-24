@@ -9,6 +9,7 @@ pub enum Error {
     ParsingFailure,
     MissingKey,
     InvalidValue,
+    InvalidSection(String),
     MissingRole(String),
     Eval(eval::Error),
 }
@@ -33,7 +34,8 @@ impl fmt::Display for Error {
             Error::ParsingFailure => write!(f, "Parsing failure"),
             Error::MissingKey => write!(f, "Missing key in configuration"),
             Error::InvalidValue => write!(f, "Invalid value in configuration"),
-            Error::MissingRole(ref name) => write!(f, "Missing role {}", name),
+            Error::InvalidSection(ref name) => write!(f, "Invalid section: {}", name),
+            Error::MissingRole(ref name) => write!(f, "Missing role: {}", name),
             Error::Eval(ref err) => write!(f, "Evaluation error: {}", err),
         }
     }

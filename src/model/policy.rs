@@ -6,15 +6,17 @@ use crate::model::Model;
 use crate::rbac::RoleManager;
 
 impl Model {
+    /// Initialize the roles in RBAC.
     pub fn build_role_links<RM: RoleManager + Send + 'static>(&mut self, role_manager: &mut RM) -> Result<(), Error> {
         if let Some(g) = self.data.get_mut("g") {
-            for (name, assertion) in g.iter_mut() {
+            for assertion in g.values_mut() {
                 assertion.build_role_links(role_manager)?;
             }
         }
         Ok(())
     }
 
+    /// Clear all the current policies.
     pub fn clear_policy(&mut self) {
         if let Some(p) = self.data.get_mut("p") {
             for assertion in p.values_mut() {
@@ -28,15 +30,17 @@ impl Model {
         }
     }
 
-    pub fn get_policy(&self, sec: &str, ptype: &str) -> Option<Vec<Vec<String>>> {
-        if let Some(sec_map) = self.data.get(sec) {
-            if let Some(assertion) = sec_map.get(ptype) {
-                Some(assertion.policy.clone());
+    /// Get all the rules in a policy.
+    pub fn get_policy(&self, section: &str, ptype: &str) -> Option<Vec<Vec<String>>> {
+        if let Some(section_map) = self.data.get(section) {
+            if let Some(assertion) = section_map.get(ptype) {
+                return Some(assertion.policy.clone());
             }
         }
         None
     }
-
+    
+    /// Get rules based on field filters from a policy.
     pub fn get_filtered_policy(
         &mut self,
         sec: &str,
@@ -69,6 +73,7 @@ impl Model {
         }
     }
 
+    /// Determine whether a model has the specified policy rule.
     pub fn has_policy(&self, sec: &str, ptype: &str, rule: &[&str]) -> bool {
         if let Some(sec_map) = self.data.get(sec) {
             if let Some(assertion) = sec_map.get(ptype) {
@@ -82,6 +87,7 @@ impl Model {
         false
     }
 
+    /// Add a policy rule to the model.
     pub fn add_policy(&mut self, sec: &str, ptype: &str, rule: &[&str]) -> bool {
         if !self.has_policy(sec, ptype, rule) {
             if !self.data.contains_key(sec) {
@@ -106,6 +112,7 @@ impl Model {
         }
     }
 
+    /// Removes a policy rule from the model.
     pub fn remove_policy(&mut self, sec: &str, ptype: &str, rule: &[&str]) -> bool {
         if let Some(sec_map) = self.data.get_mut(sec) {
             if let Some(assertion) = sec_map.get_mut(ptype) {
@@ -118,7 +125,8 @@ impl Model {
         }
         false
     }
-
+    
+    /// Removes policy rules based on field filters from the model.
     pub fn remove_filtered_policy(
         &mut self,
         sec: &str,
@@ -151,11 +159,12 @@ impl Model {
         res
     }
 
-    pub fn get_values_for_field_in_policy(&self, sec: &str, ptype: &str, field_index: i32) -> Vec<String> {
+    /// Get all values for a field for all rules in a policy, duplicated values are removed.
+    pub fn get_values_for_field_in_policy(&self, section: &str, ptype: &str, field_index: i32) -> Vec<String> {
         let mut values: Vec<String> = Vec::new();
 
-        for sec_map in self.data.values() {
-            for assertion in sec_map.values() {
+        if let Some(sec_map) = self.data.get(section) {
+            if let Some(assertion) = sec_map.get(ptype) {
                 for rules in &assertion.policy {
                     if let Some(rule) = rules.get(field_index as usize) {
                         values.push(rule.to_string());

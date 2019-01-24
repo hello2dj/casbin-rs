@@ -68,21 +68,23 @@ impl RoleManager for DefaultRoleManager {
     /// Get the list of roles that `name` inherits.
     ///
     /// `domain` is a prefix to the role.
-    fn get_roles(&self, name: &str, domain: Option<&str>) -> Result<Vec<String>, Error> {
+    fn get_roles(&self, name: &str, domain: Option<&str>) -> Vec<String> {
         let name = DefaultRoleManager::get_name_with_domain(name, domain);
-        let role = self.get_role(&name).ok_or(Error::MissingRole(name.clone()))?;
-        let roles = role.lock().unwrap().get_roles();
-        Ok(roles)
+        if let Some(role) = self.get_role(&name) {
+            role.lock().unwrap().get_roles()
+        } else {
+            Vec::new()
+        }
     }
 
     /// Get the list of users that inherit `name`.
     ///
     /// `domain` is a prefix to the role.
-    fn get_users(&self, name: &str, domain: Option<&str>) -> Result<Vec<String>, Error> {
+    fn get_users(&self, name: &str, domain: Option<&str>) -> Vec<String> {
         let name = DefaultRoleManager::get_name_with_domain(name, domain);
 
         if !self.has_role(&name) {
-            return Err(Error::MissingRole(name.clone()));
+            return Vec::new();
         }
 
         let mut names = vec![];
@@ -93,7 +95,7 @@ impl RoleManager for DefaultRoleManager {
             }
         }
 
-        Ok(names)
+        names
     }
 
     fn print_roles(&self) -> Result<(), Error> {
@@ -176,13 +178,13 @@ mod tests {
         assert_eq!(manager.has_link("u4", "g2", None), true);
         assert_eq!(manager.has_link("u4", "g3", None), true);
 
-        assert_eq!(manager.get_roles("u1", None).unwrap(), ["g1"]);
-        assert_eq!(manager.get_roles("u2", None).unwrap(), ["g1"]);
-        assert_eq!(manager.get_roles("u3", None).unwrap(), ["g2"]);
-        assert_eq!(manager.get_roles("u4", None).unwrap(), ["g2", "g3"]);
-        assert_eq!(manager.get_roles("g1", None).unwrap(), ["g3"]);
-        assert_eq!(manager.get_roles("g2", None).unwrap(), Vec::<String>::new());
-        assert_eq!(manager.get_roles("g3", None).unwrap(), Vec::<String>::new());
+        assert_eq!(manager.get_roles("u1", None), ["g1"]);
+        assert_eq!(manager.get_roles("u2", None), ["g1"]);
+        assert_eq!(manager.get_roles("u3", None), ["g2"]);
+        assert_eq!(manager.get_roles("u4", None), ["g2", "g3"]);
+        assert_eq!(manager.get_roles("g1", None), ["g3"]);
+        assert_eq!(manager.get_roles("g2", None), Vec::<String>::new());
+        assert_eq!(manager.get_roles("g3", None), Vec::<String>::new());
 
         manager.delete_link("g1", "g3", None).unwrap();
         manager.delete_link("u4", "g2", None).unwrap();
@@ -207,13 +209,13 @@ mod tests {
         assert_eq!(manager.has_link("u4", "g2", None), false);
         assert_eq!(manager.has_link("u4", "g3", None), true);
 
-        assert_eq!(manager.get_roles("u1", None).unwrap(), ["g1"]);
-        assert_eq!(manager.get_roles("u2", None).unwrap(), ["g1"]);
-        assert_eq!(manager.get_roles("u3", None).unwrap(), ["g2"]);
-        assert_eq!(manager.get_roles("u4", None).unwrap(), ["g3"]);
-        assert_eq!(manager.get_roles("g1", None).unwrap(), Vec::<String>::new());
-        assert_eq!(manager.get_roles("g2", None).unwrap(), Vec::<String>::new());
-        assert_eq!(manager.get_roles("g3", None).unwrap(), Vec::<String>::new());
+        assert_eq!(manager.get_roles("u1", None), ["g1"]);
+        assert_eq!(manager.get_roles("u2", None), ["g1"]);
+        assert_eq!(manager.get_roles("u3", None), ["g2"]);
+        assert_eq!(manager.get_roles("u4", None), ["g3"]);
+        assert_eq!(manager.get_roles("g1", None), Vec::<String>::new());
+        assert_eq!(manager.get_roles("g2", None), Vec::<String>::new());
+        assert_eq!(manager.get_roles("g3", None), Vec::<String>::new());
     }
 
     #[test]

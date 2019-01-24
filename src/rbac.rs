@@ -12,8 +12,8 @@ pub trait RoleManager {
     fn add_link(&mut self, name1: &str, name2: &str, domain: Option<&str>) -> Result<(), Error>;
     fn delete_link(&mut self, name1: &str, name2: &str, domain: Option<&str>) -> Result<(), Error>;
     fn has_link(&self, name1: &str, name2: &str, domain: Option<&str>) -> bool;
-    fn get_roles(&self, name: &str, domain: Option<&str>) -> Result<Vec<String>, Error>;
-    fn get_users(&self, name: &str, domain: Option<&str>) -> Result<Vec<String>, Error>;
+    fn get_roles(&self, name: &str, domain: Option<&str>) -> Vec<String>;
+    fn get_users(&self, name: &str, domain: Option<&str>) -> Vec<String>;
     fn print_roles(&self) -> Result<(), Error>;
 }
 
@@ -76,7 +76,7 @@ impl Role {
 
     pub fn has_direct_role(&self, name: &str) -> bool {
         for role in &self.roles {
-            if self.name == role.lock().unwrap().name {
+            if name == role.lock().unwrap().name {
                 return true;
             }
         }
