@@ -1,6 +1,6 @@
-use crate::error::Error;
 use crate::effect::Effector;
 use crate::enforcer::Enforcer;
+use crate::error::Error;
 use crate::persist::Adapter;
 use crate::rbac::RoleManager;
 

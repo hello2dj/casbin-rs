@@ -13,5 +13,4 @@ impl<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> Enforcer<A, RM, 
     pub(crate) fn remove_policy_internal(&mut self, sec: &str, ptype: &str, rule: &[&str]) -> bool {
         self.model.remove_policy(sec, ptype, rule)
     }
-
 }

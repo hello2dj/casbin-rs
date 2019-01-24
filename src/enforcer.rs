@@ -55,7 +55,8 @@ impl<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> Enforcer<A, RM, 
     /// Rebuild the role inheritance relations.
     fn build_role_links(&mut self) -> Result<(), Error> {
         self.role_manager.lock().unwrap().clear()?;
-        self.model.build_role_links(self.role_manager.lock().unwrap().deref_mut())?;
+        self.model
+            .build_role_links(self.role_manager.lock().unwrap().deref_mut())?;
         Ok(())
     }
 
@@ -174,7 +175,11 @@ mod tests {
         assert_eq!(model.add_def("e", "e", "some(where (p.eft == allow))").unwrap(), true);
         assert_eq!(
             model
-                .add_def("m", "m", "(r.sub == p.sub) && keyMatch(r.obj, p.obj) && regexMatch(r.act, p.act)")
+                .add_def(
+                    "m",
+                    "m",
+                    "(r.sub == p.sub) && keyMatch(r.obj, p.obj) && regexMatch(r.act, p.act)"
+                )
                 .unwrap(),
             true
         );
@@ -183,9 +188,15 @@ mod tests {
         let enforcer = DefaultEnforcer::new(model, adapter).expect("failed to create instance of Enforcer");
 
         assert_eq!(enforcer.enforce("alice", "/alice_data/resource1", "GET").unwrap(), true);
-        assert_eq!(enforcer.enforce("alice", "/alice_data/resource1", "POST").unwrap(), true);
+        assert_eq!(
+            enforcer.enforce("alice", "/alice_data/resource1", "POST").unwrap(),
+            true
+        );
         assert_eq!(enforcer.enforce("alice", "/alice_data/resource2", "GET").unwrap(), true);
-        assert_eq!(enforcer.enforce("alice", "/alice_data/resource2", "POST").unwrap(), false);
+        assert_eq!(
+            enforcer.enforce("alice", "/alice_data/resource2", "POST").unwrap(),
+            false
+        );
         assert_eq!(enforcer.enforce("alice", "/bob_data/resource1", "GET").unwrap(), false);
         assert_eq!(enforcer.enforce("alice", "/bob_data/resource1", "POST").unwrap(), false);
         assert_eq!(enforcer.enforce("alice", "/bob_data/resource2", "GET").unwrap(), false);
@@ -213,7 +224,11 @@ mod tests {
         assert_eq!(model.add_def("e", "e", "!some(where (p.eft == deny))").unwrap(), true);
         assert_eq!(
             model
-                .add_def("m", "m", "(r.sub == p.sub) && keyMatch(r.obj, p.obj) && regexMatch(r.act, p.act)")
+                .add_def(
+                    "m",
+                    "m",
+                    "(r.sub == p.sub) && keyMatch(r.obj, p.obj) && regexMatch(r.act, p.act)"
+                )
                 .unwrap(),
             true
         );
@@ -221,10 +236,13 @@ mod tests {
         let adapter = FileAdapter::new("examples/keymatch_policy.csv", false);
         let enforcer = DefaultEnforcer::new(model, adapter).expect("failed to create instance of Enforcer");
 
-        assert_eq!(enforcer.enforce("alice", "/alice_data/resource2", "POST").unwrap(), true);
+        assert_eq!(
+            enforcer.enforce("alice", "/alice_data/resource2", "POST").unwrap(),
+            true
+        );
     }
 
-     #[test]
+    #[test]
     fn test_rbac_in_memory() {
         let mut model = Model::new();
         assert_eq!(model.add_def("r", "r", "sub, obj, act").unwrap(), true);
@@ -244,10 +262,16 @@ mod tests {
 
         assert_eq!(enforcer.add_permission_for_user("alice", &["data1", "read"]), true);
         assert_eq!(enforcer.add_permission_for_user("bob", &["data2", "write"]), true);
-        assert_eq!(enforcer.add_permission_for_user("data2_admin", &["data2", "read"]), true);
-        assert_eq!(enforcer.add_permission_for_user("data2_admin", &["data2", "write"]), true);
+        assert_eq!(
+            enforcer.add_permission_for_user("data2_admin", &["data2", "read"]),
+            true
+        );
+        assert_eq!(
+            enforcer.add_permission_for_user("data2_admin", &["data2", "write"]),
+            true
+        );
         assert_eq!(enforcer.add_role_for_user("alice", "data2_admin"), true);
-        
+
         assert_eq!(enforcer.enforce("alice", "data1", "read").unwrap(), true);
         assert_eq!(enforcer.enforce("alice", "data1", "write").unwrap(), false);
         assert_eq!(enforcer.enforce("alice", "data2", "read").unwrap(), true);

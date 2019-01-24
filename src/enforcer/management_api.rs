@@ -8,7 +8,7 @@ impl<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> Enforcer<A, RM, 
     pub fn get_all_subjects(&self) -> Vec<String> {
         self.get_all_named_subjects("p")
     }
-    
+
     /// Get the list of subjects that show up in the current named policy.
     pub fn get_all_named_subjects(&self, ptype: &str) -> Vec<String> {
         self.model.get_values_for_field_in_policy("p", ptype, 0)
@@ -18,7 +18,7 @@ impl<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> Enforcer<A, RM, 
     pub fn get_all_objects(&self) -> Vec<String> {
         self.get_all_named_objects("p")
     }
-    
+
     /// Get the list of objects that show up in the current named policy.
     pub fn get_all_named_objects(&self, ptype: &str) -> Vec<String> {
         self.model.get_values_for_field_in_policy("p", ptype, 1)
@@ -68,7 +68,7 @@ impl<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> Enforcer<A, RM, 
     pub fn has_policy(&self, policy: &[&str]) -> bool {
         self.has_named_policy("p", policy)
     }
-    
+
     /// Determines whether a named authorization rule exists.
     pub fn has_named_policy(&self, ptype: &str, policy: &[&str]) -> bool {
         self.model.has_policy("p", ptype, policy)
@@ -164,6 +164,5 @@ mod tests {
         let model = Model::from_file("examples/rbac_model.conf").expect("failed to load model");
         let adapter = FileAdapter::new("examples/rbac_policy.csv", false);
         let enforcer = DefaultEnforcer::new(model, adapter).expect("failed to create instance of Enforcer");
-
     }
 }

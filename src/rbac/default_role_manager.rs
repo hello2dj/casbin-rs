@@ -80,7 +80,7 @@ impl RoleManager for DefaultRoleManager {
     /// `domain` is a prefix to the role.
     fn get_users(&self, name: &str, domain: Option<&str>) -> Result<Vec<String>, Error> {
         let name = DefaultRoleManager::get_name_with_domain(name, domain);
-        
+
         if !self.has_role(&name) {
             return Err(Error::MissingRole(name.clone()));
         }
