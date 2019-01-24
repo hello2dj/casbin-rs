@@ -5,7 +5,6 @@ pub mod enforcer;
 mod error;
 pub mod model;
 pub mod persist;
-pub mod policy;
 pub mod rbac;
 mod util;
 

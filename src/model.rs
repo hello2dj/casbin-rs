@@ -10,6 +10,7 @@ use crate::error::Error;
 use crate::util::{escape_assertion, remove_comments};
 
 mod function;
+pub mod policy;
 
 pub use crate::model::function::{get_function_map, FunctionMap};
 

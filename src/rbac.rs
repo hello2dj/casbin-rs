@@ -1,6 +1,5 @@
-use std::cell::RefCell;
 use std::fmt;
-use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 use crate::error::Error;
 
@@ -14,14 +13,14 @@ pub trait RoleManager {
     fn delete_link(&mut self, name1: &str, name2: &str, domain: Option<&str>) -> Result<(), Error>;
     fn has_link(&self, name1: &str, name2: &str, domain: Option<&str>) -> bool;
     fn get_roles(&self, name: &str, domain: Option<&str>) -> Result<Vec<String>, Error>;
-    fn get_users(&self, name: &str) -> Result<Vec<String>, Error>;
+    fn get_users(&self, name: &str, domain: Option<&str>) -> Result<Vec<String>, Error>;
     fn print_roles(&self) -> Result<(), Error>;
 }
 
 #[derive(Clone, Debug)]
 pub struct Role {
     pub name: String,
-    roles: Vec<Rc<RefCell<Role>>>,
+    roles: Vec<Arc<Mutex<Role>>>,
 }
 
 impl Role {
@@ -32,14 +31,26 @@ impl Role {
         }
     }
 
-    pub fn add_role(&mut self, role: Rc<RefCell<Role>>) {
-        if !self.roles.contains(&role) {
+    fn roles_contains(&self, name: &str) -> bool {
+        for role in &self.roles {
+            if role.lock().unwrap().name == name {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    pub fn add_role(&mut self, role: Arc<Mutex<Role>>) {
+        let name = role.lock().unwrap().to_string();
+        if !self.roles_contains(&name) {
             self.roles.push(role);
         }
     }
 
-    pub fn delete_role(&mut self, role: Rc<RefCell<Role>>) {
-        let index = self.roles.iter().position(|x| *x == role);
+    pub fn delete_role(&mut self, role: Arc<Mutex<Role>>) {
+        let name = role.lock().unwrap().name.to_string();
+        let index = self.roles.iter().position(|x| x.lock().unwrap().name == name);
         if let Some(index) = index {
             self.roles.remove(index);
         }
@@ -55,7 +66,7 @@ impl Role {
         }
 
         for role in &self.roles {
-            if role.borrow().has_role(name, hierarchy_level - 1) {
+            if role.lock().unwrap().has_role(name, hierarchy_level - 1) {
                 return true;
             }
         }
@@ -65,7 +76,7 @@ impl Role {
 
     pub fn has_direct_role(&self, name: &str) -> bool {
         for role in &self.roles {
-            if self.name == role.borrow().name {
+            if self.name == role.lock().unwrap().name {
                 return true;
             }
         }
@@ -76,7 +87,7 @@ impl Role {
     pub fn get_roles(&self) -> Vec<String> {
         let mut roles = Vec::new();
         for role in &self.roles {
-            roles.push(role.borrow().name.clone());
+            roles.push(role.lock().unwrap().name.clone());
         }
         roles
     }

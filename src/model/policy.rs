@@ -6,7 +6,7 @@ use crate::model::Model;
 use crate::rbac::RoleManager;
 
 impl Model {
-    pub fn build_role_links<RM: RoleManager>(&mut self, role_manager: &mut RM) -> Result<(), Error> {
+    pub fn build_role_links<RM: RoleManager + Send + 'static>(&mut self, role_manager: &mut RM) -> Result<(), Error> {
         if let Some(g) = self.data.get_mut("g") {
             for (name, assertion) in g.iter_mut() {
                 assertion.build_role_links(role_manager)?;
@@ -17,14 +17,18 @@ impl Model {
 
     pub fn clear_policy(&mut self) {
         if let Some(p) = self.data.get_mut("p") {
-            p.clear();
+            for assertion in p.values_mut() {
+                assertion.policy.clear();
+            }
         }
         if let Some(g) = self.data.get_mut("g") {
-            g.clear();
+            for assertion in g.values_mut() {
+                assertion.policy.clear();
+            }
         }
     }
 
-    pub fn get_policy(&mut self, sec: &str, ptype: &str) -> Option<Vec<Vec<String>>> {
+    pub fn get_policy(&self, sec: &str, ptype: &str) -> Option<Vec<Vec<String>>> {
         if let Some(sec_map) = self.data.get(sec) {
             if let Some(assertion) = sec_map.get(ptype) {
                 Some(assertion.policy.clone());
@@ -65,11 +69,11 @@ impl Model {
         }
     }
 
-    pub fn has_policy(&self, sec: &str, ptype: &str, rule: &Vec<String>) -> bool {
+    pub fn has_policy(&self, sec: &str, ptype: &str, rule: &[&str]) -> bool {
         if let Some(sec_map) = self.data.get(sec) {
             if let Some(assertion) = sec_map.get(ptype) {
                 for a_rule in &assertion.policy {
-                    if a_rule == rule {
+                    if a_rule.as_slice() == rule {
                         return true;
                     }
                 }
@@ -78,8 +82,8 @@ impl Model {
         false
     }
 
-    pub fn add_policy(&mut self, sec: &str, ptype: &str, rule: Vec<String>) -> bool {
-        if !self.has_policy(sec, ptype, &rule) {
+    pub fn add_policy(&mut self, sec: &str, ptype: &str, rule: &[&str]) -> bool {
+        if !self.has_policy(sec, ptype, rule) {
             if !self.data.contains_key(sec) {
                 let sec_map: HashMap<String, Assertion> = HashMap::new();
                 self.data.insert(sec.to_string(), sec_map);
@@ -91,6 +95,8 @@ impl Model {
                 sec_map.insert(ptype.to_string(), assertion);
             }
 
+            let rule: Vec<String> = rule.iter().map(|s| s.to_string()).collect();
+
             let assertion = sec_map.get_mut(ptype).unwrap();
             assertion.policy.push(rule);
 
@@ -100,7 +106,7 @@ impl Model {
         }
     }
 
-    pub fn remove_policy(&mut self, sec: &str, ptype: &str, rule: Vec<String>) -> bool {
+    pub fn remove_policy(&mut self, sec: &str, ptype: &str, rule: &[&str]) -> bool {
         if let Some(sec_map) = self.data.get_mut(sec) {
             if let Some(assertion) = sec_map.get_mut(ptype) {
                 let index = assertion.policy.iter().position(|x| *x == rule);

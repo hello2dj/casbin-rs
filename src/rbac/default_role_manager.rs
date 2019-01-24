@@ -1,22 +1,19 @@
-// TODO:
-// - Add support for matching functions.
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 use crate::error::Error;
 use crate::rbac::{Role, RoleManager};
 
 #[derive(Debug)]
 pub struct DefaultRoleManager {
-    all_roles: HashMap<String, Rc<RefCell<Role>>>,
+    roles: HashMap<String, Arc<Mutex<Role>>>,
     max_hierarchy_level: i32,
 }
 
 impl RoleManager for DefaultRoleManager {
     /// Clear all stored data and reset the role manager to the initial state.
     fn clear(&mut self) -> Result<(), Error> {
-        self.all_roles.clear();
+        self.roles.clear();
         Ok(())
     }
 
@@ -29,7 +26,7 @@ impl RoleManager for DefaultRoleManager {
         let role1 = self.create_role(&name1);
         let role2 = self.create_role(&name2);
 
-        role1.borrow_mut().add_role(role2);
+        role1.lock().unwrap().add_role(role2);
 
         Ok(())
     }
@@ -43,7 +40,7 @@ impl RoleManager for DefaultRoleManager {
         let role1 = self.get_role(&name1).ok_or(Error::MissingRole(name1.clone()))?;
         let role2 = self.get_role(&name2).ok_or(Error::MissingRole(name2.clone()))?;
 
-        role1.borrow_mut().delete_role(role2);
+        role1.lock().unwrap().delete_role(role2);
         Ok(())
     }
 
@@ -64,7 +61,7 @@ impl RoleManager for DefaultRoleManager {
             return true;
         }
 
-        let result = role1.borrow().has_role(&name2, self.max_hierarchy_level);
+        let result = role1.lock().unwrap().has_role(&name2, self.max_hierarchy_level);
         result
     }
 
@@ -74,12 +71,29 @@ impl RoleManager for DefaultRoleManager {
     fn get_roles(&self, name: &str, domain: Option<&str>) -> Result<Vec<String>, Error> {
         let name = DefaultRoleManager::get_name_with_domain(name, domain);
         let role = self.get_role(&name).ok_or(Error::MissingRole(name.clone()))?;
-        let roles = role.borrow().get_roles();
+        let roles = role.lock().unwrap().get_roles();
         Ok(roles)
     }
 
-    fn get_users(&self, _name: &str) -> Result<Vec<String>, Error> {
-        unimplemented!()
+    /// Get the list of users that inherit `name`.
+    ///
+    /// `domain` is a prefix to the role.
+    fn get_users(&self, name: &str, domain: Option<&str>) -> Result<Vec<String>, Error> {
+        let name = DefaultRoleManager::get_name_with_domain(name, domain);
+        
+        if !self.has_role(&name) {
+            return Err(Error::MissingRole(name.clone()));
+        }
+
+        let mut names = vec![];
+
+        for (role_name, role) in &self.roles {
+            if role.lock().unwrap().has_direct_role(&name) {
+                names.push(role_name.clone())
+            }
+        }
+
+        Ok(names)
     }
 
     fn print_roles(&self) -> Result<(), Error> {
@@ -90,27 +104,27 @@ impl RoleManager for DefaultRoleManager {
 impl DefaultRoleManager {
     pub fn new(max_hierarchy_level: i32) -> Self {
         DefaultRoleManager {
-            all_roles: HashMap::new(),
+            roles: HashMap::new(),
             max_hierarchy_level,
         }
     }
 
     fn has_role(&self, name: &str) -> bool {
-        self.all_roles.contains_key(name)
+        self.roles.contains_key(name)
     }
 
-    fn create_role(&mut self, name: &str) -> Rc<RefCell<Role>> {
+    fn create_role(&mut self, name: &str) -> Arc<Mutex<Role>> {
         if self.has_role(name) {
-            Rc::clone(self.all_roles.get(name).unwrap())
+            Arc::clone(self.roles.get(name).unwrap())
         } else {
-            let role = Role::new(name);
-            &self.all_roles.insert(name.to_string(), Rc::new(RefCell::new(role)));
-            Rc::clone(self.all_roles.get(name).unwrap())
+            let role = Arc::new(Mutex::new(Role::new(name)));
+            &self.roles.insert(name.to_string(), Arc::clone(&role));
+            role
         }
     }
 
-    fn get_role(&self, name: &str) -> Option<Rc<RefCell<Role>>> {
-        Some(Rc::clone(self.all_roles.get(name)?))
+    fn get_role(&self, name: &str) -> Option<Arc<Mutex<Role>>> {
+        Some(Arc::clone(self.roles.get(name)?))
     }
 
     fn get_name_with_domain(name: &str, domain: Option<&str>) -> String {

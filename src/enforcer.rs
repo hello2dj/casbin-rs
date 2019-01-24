@@ -1,3 +1,6 @@
+use std::ops::DerefMut;
+use std::sync::{Arc, Mutex};
+
 use eval::{to_value, Expr};
 
 use crate::effect::{DefaultEffector, Effect, Effector};
@@ -7,6 +10,10 @@ use crate::model::{get_function_map, FunctionMap};
 use crate::persist::Adapter;
 use crate::rbac::{DefaultRoleManager, RoleManager};
 use crate::util::builtin_operators;
+
+mod internal_api;
+pub mod management_api;
+pub mod rbac_api;
 
 #[derive(Debug)]
 pub struct DefaultEnforcer();
@@ -19,23 +26,23 @@ impl DefaultEnforcer {
 
 /// Enforcer is the main interface for authorization enforcement and policy management.
 #[derive(Debug)]
-pub struct Enforcer<A: Adapter, RM: RoleManager, E: Effector> {
+pub struct Enforcer<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> {
     model: Model,
     function_map: FunctionMap,
     adapter: A,
-    role_manager: RM,
+    role_manager: Arc<Mutex<RM>>,
     effector: E,
     auto_build_role_links: bool,
 }
 
-impl<A: Adapter, RM: RoleManager, E: Effector> Enforcer<A, RM, E> {
+impl<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> Enforcer<A, RM, E> {
     /// Create an instance of an Enforcer from a `model` and `policy`.
     pub fn new(model: Model, policy: A, role_manager: RM, effector: E) -> Result<Enforcer<A, RM, E>, Error> {
         let mut enforcer = Enforcer {
             model,
             function_map: get_function_map(),
             adapter: policy,
-            role_manager,
+            role_manager: Arc::new(Mutex::new(role_manager)),
             effector,
             auto_build_role_links: true,
         };
@@ -47,8 +54,8 @@ impl<A: Adapter, RM: RoleManager, E: Effector> Enforcer<A, RM, E> {
 
     /// Rebuild the role inheritance relations.
     fn build_role_links(&mut self) -> Result<(), Error> {
-        self.role_manager.clear()?;
-        self.model.build_role_links(&mut self.role_manager)?;
+        self.role_manager.lock().unwrap().clear()?;
+        self.model.build_role_links(self.role_manager.lock().unwrap().deref_mut())?;
         Ok(())
     }
 
@@ -104,6 +111,15 @@ impl<A: Adapter, RM: RoleManager, E: Effector> Enforcer<A, RM, E> {
                         v[1].as_str().unwrap(),
                     )))
                 });
+
+            let role_manager = Arc::clone(&self.role_manager);
+            let expr = expr.function("g", move |v| {
+                // TODO(sduquette): handle domain in v[2].
+                let name1 = v[0].as_str().unwrap();
+                let name2 = v[1].as_str().unwrap();
+                let result = role_manager.lock().unwrap().has_link(name1, name2, None);
+                Ok(to_value(result))
+            });
 
             let result = expr.exec().map_err(Error::Eval)?;
 
@@ -187,6 +203,57 @@ mod tests {
         assert_eq!(enforcer.enforce("cathy", "/cathy_data", "GET").unwrap(), true);
         assert_eq!(enforcer.enforce("cathy", "/cathy_data", "POST").unwrap(), true);
         assert_eq!(enforcer.enforce("cathy", "/cathy_data", "DELETE").unwrap(), false);
+    }
 
+    #[test]
+    fn test_key_match_in_memory_deny() {
+        let mut model = Model::new();
+        assert_eq!(model.add_def("r", "r", "sub, obj, act").unwrap(), true);
+        assert_eq!(model.add_def("p", "p", "sub, obj, act").unwrap(), true);
+        assert_eq!(model.add_def("e", "e", "!some(where (p.eft == deny))").unwrap(), true);
+        assert_eq!(
+            model
+                .add_def("m", "m", "(r.sub == p.sub) && keyMatch(r.obj, p.obj) && regexMatch(r.act, p.act)")
+                .unwrap(),
+            true
+        );
+
+        let adapter = FileAdapter::new("examples/keymatch_policy.csv", false);
+        let enforcer = DefaultEnforcer::new(model, adapter).expect("failed to create instance of Enforcer");
+
+        assert_eq!(enforcer.enforce("alice", "/alice_data/resource2", "POST").unwrap(), true);
+    }
+
+     #[test]
+    fn test_rbac_in_memory() {
+        let mut model = Model::new();
+        assert_eq!(model.add_def("r", "r", "sub, obj, act").unwrap(), true);
+        assert_eq!(model.add_def("p", "p", "sub, obj, act").unwrap(), true);
+        assert_eq!(model.add_def("g", "g", "_, _").unwrap(), true);
+        assert_eq!(model.add_def("e", "e", "some(where (p.eft == allow))").unwrap(), true);
+        assert_eq!(
+            model
+                .add_def("m", "m", "g(r.sub, p.sub) && (r.obj == p.obj) && (r.act == p.act)")
+                .unwrap(),
+            true
+        );
+
+        // TODO(sduquette): This is a temporary workaround to create an enforcer with an empty policy.
+        let adapter = FileAdapter::new("examples/empty.csv", false);
+        let mut enforcer = DefaultEnforcer::new(model, adapter).expect("failed to create instance of Enforcer");
+
+        assert_eq!(enforcer.add_permission_for_user("alice", &["data1", "read"]), true);
+        assert_eq!(enforcer.add_permission_for_user("bob", &["data2", "write"]), true);
+        assert_eq!(enforcer.add_permission_for_user("data2_admin", &["data2", "read"]), true);
+        assert_eq!(enforcer.add_permission_for_user("data2_admin", &["data2", "write"]), true);
+        assert_eq!(enforcer.add_role_for_user("alice", "data2_admin"), true);
+        
+        assert_eq!(enforcer.enforce("alice", "data1", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "data1", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "data2", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "data2", "write").unwrap(), true);
+        assert_eq!(enforcer.enforce("bob", "data1", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data1", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data2", "read").unwrap(), false);
     }
 }
