@@ -131,8 +131,8 @@ impl Model {
         &mut self,
         sec: &str,
         ptype: &str,
-        field_index: i32,
-        field_values: Vec<String>,
+        field_index: usize,
+        field_values: &[&str],
     ) -> bool {
         let mut res: bool = false;
         if let Some(sec_map) = self.data.get_mut(sec) {
@@ -140,8 +140,8 @@ impl Model {
                 let mut tmp: Vec<Vec<String>> = Vec::new();
                 for rules in &assertion.policy {
                     let mut matched = true;
-                    let i_rules = &rules[field_index as usize..];
-                    for (rule, field_value) in i_rules.iter().zip(&field_values) {
+                    let i_rules = &rules[field_index..];
+                    for (rule, field_value) in i_rules.iter().zip(field_values) {
                         if !field_value.is_empty() && rule != field_value {
                             matched = false;
                             break;

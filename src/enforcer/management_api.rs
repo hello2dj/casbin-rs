@@ -129,9 +129,19 @@ impl<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> Enforcer<A, RM, 
         self.remove_named_policy("p", policy)
     }
 
+    /// Remove an authorization rule from the current policy, field filters can be specified.
+    pub fn remove_filtered_policy(&mut self, field_index: usize, field_values: &[&str]) -> bool {
+        self.remove_filtered_named_policy("p", field_index, field_values)
+    }
+
     /// Remove an authorization rule from the current named policy.
     pub fn remove_named_policy(&mut self, ptype: &str, policy: &[&str]) -> bool {
         self.remove_policy_internal("p", ptype, policy)
+    }
+
+    /// Remove an authorization rule from the current named policy, field filters can be specified.
+    pub fn remove_filtered_named_policy(&mut self, ptype: &str, field_index: usize, field_values: &[&str]) -> bool {
+        self.remove_filtered_policy_internal("p", ptype, field_index, field_values)
     }
 
     /// Determine whether a role inheritance rule exists.
@@ -171,6 +181,11 @@ impl<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> Enforcer<A, RM, 
         self.remove_named_grouping_policy("g", policy)
     }
 
+    /// Remove a role inheritance rule from the current policy, field filters can be specified.
+    pub fn remove_filtered_grouping_policy(&mut self, field_index: usize, field_values: &[&str]) -> bool {
+        self.remove_filtered_named_grouping_policy("g", field_index, field_values)
+    }
+
     /// Remove a role inheritance rule from the current policy.
     pub fn remove_named_grouping_policy(&mut self, ptype: &str, policy: &[&str]) -> bool {
         let rule_removed = self.remove_policy_internal("g", ptype, policy);
@@ -180,6 +195,22 @@ impl<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> Enforcer<A, RM, 
         }
 
         rule_removed
+    }
+
+    /// Remove a role inheritance rule from the current named policy, field filters can be specified.
+    pub fn remove_filtered_named_grouping_policy(
+        &mut self,
+        ptype: &str,
+        field_index: usize,
+        field_values: &[&str],
+    ) -> bool {
+        let result = self.remove_filtered_policy_internal("g", ptype, field_index, field_values);
+
+        if self.auto_build_role_links {
+            self.build_role_links().expect("build_role_links failed");
+        }
+
+        result
     }
 }
 
@@ -309,6 +340,9 @@ mod tests {
                 ["eve", "data3", "read"]
             ]
         );
+
+        assert_eq!(enforcer.remove_filtered_policy(1, &["data2"]), true);
+        assert_eq!(enforcer.get_policy(), [["eve", "data3", "read"]]);
     }
 
     #[test]
@@ -332,6 +366,17 @@ mod tests {
         assert_eq!(enforcer.get_roles_for_user("non_exist", None), Vec::<String>::new());
 
         assert_eq!(enforcer.get_users_for_role("data1_admin", None), ["bob"]);
+        assert_eq!(enforcer.get_users_for_role("data2_admin", None), Vec::<String>::new());
+        assert_eq!(enforcer.get_users_for_role("data3_admin", None), ["eve"]);
+
+        assert_eq!(enforcer.remove_filtered_grouping_policy(0, &["bob"]), true);
+
+        assert_eq!(enforcer.get_roles_for_user("alice", None), Vec::<String>::new());
+        assert_eq!(enforcer.get_roles_for_user("bob", None), Vec::<String>::new());
+        assert_eq!(enforcer.get_roles_for_user("eve", None), ["data3_admin"]);
+        assert_eq!(enforcer.get_roles_for_user("non_exist", None), Vec::<String>::new());
+
+        assert_eq!(enforcer.get_users_for_role("data1_admin", None), Vec::<String>::new());
         assert_eq!(enforcer.get_users_for_role("data2_admin", None), Vec::<String>::new());
         assert_eq!(enforcer.get_users_for_role("data3_admin", None), ["eve"]);
     }
