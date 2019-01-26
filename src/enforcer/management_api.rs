@@ -49,9 +49,26 @@ impl<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> Enforcer<A, RM, 
         self.get_named_policy("p")
     }
 
+    /// Get all the authorization rules in the policy, field filters can be specified.
+    pub fn get_filtered_policy(&self, field_index: usize, field_values: &[&str]) -> Vec<Vec<String>> {
+        self.get_filtered_named_policy("p", field_index, field_values)
+    }
+
     /// Get all the authorization rules in the named policy.
     pub fn get_named_policy(&self, ptype: &str) -> Vec<Vec<String>> {
         self.model.get_policy("p", ptype).unwrap_or(vec![vec![]])
+    }
+
+    /// Get all the authorization rules in the named policy, field filters can be specified.
+    pub fn get_filtered_named_policy(
+        &self,
+        ptype: &str,
+        field_index: usize,
+        field_values: &[&str],
+    ) -> Vec<Vec<String>> {
+        self.model
+            .get_filtered_policy("p", ptype, field_index, field_values)
+            .unwrap_or(vec![vec![]])
     }
 
     /// Get all the role inheritance rules in the policy.
@@ -59,9 +76,26 @@ impl<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> Enforcer<A, RM, 
         self.get_named_grouping_policy("g")
     }
 
+    /// Get all the role inheritance rules in the policy, field filters can be specified.
+    pub fn get_filtered_grouping_policy(&self, field_index: usize, field_values: &[&str]) -> Vec<Vec<String>> {
+        self.get_filtered_named_grouping_policy("g", field_index, field_values)
+    }
+
     /// Get all the role inheritance rules in the policy.
     pub fn get_named_grouping_policy(&self, ptype: &str) -> Vec<Vec<String>> {
-        self.model.get_policy("g", ptype).unwrap_or(vec![vec![]])
+        self.model.get_policy("g", ptype).unwrap_or(vec![])
+    }
+
+    /// Get all the role inheritance rules in the policy, field filters can be specified.
+    pub fn get_filtered_named_grouping_policy(
+        &self,
+        ptype: &str,
+        field_index: usize,
+        field_values: &[&str],
+    ) -> Vec<Vec<String>> {
+        self.model
+            .get_filtered_policy("g", ptype, field_index, field_values)
+            .unwrap_or(vec![])
     }
 
     /// Determine whether an authorization rule exists.
@@ -173,15 +207,72 @@ mod tests {
             ]
         );
 
+        assert_eq!(
+            enforcer.get_filtered_policy(0, &["alice"]),
+            &[["alice", "data1", "read"]]
+        );
+        assert_eq!(enforcer.get_filtered_policy(0, &["bob"]), &[["bob", "data2", "write"]]);
+        assert_eq!(
+            enforcer.get_filtered_policy(0, &["data2_admin"]),
+            &[["data2_admin", "data2", "read"], ["data2_admin", "data2", "write"]]
+        );
+        assert_eq!(
+            enforcer.get_filtered_policy(1, &["data1"]),
+            &[["alice", "data1", "read"]]
+        );
+        assert_eq!(
+            enforcer.get_filtered_policy(1, &["data2"]),
+            &[
+                ["bob", "data2", "write"],
+                ["data2_admin", "data2", "read"],
+                ["data2_admin", "data2", "write"]
+            ]
+        );
+        assert_eq!(
+            enforcer.get_filtered_policy(2, &["write"]),
+            &[["bob", "data2", "write"], ["data2_admin", "data2", "write"]]
+        );
+
+        assert_eq!(
+            enforcer.get_filtered_policy(0, &["data2_admin", "data2"]),
+            &[["data2_admin", "data2", "read"], ["data2_admin", "data2", "write"]]
+        );
+        // Note: Empty string in field_values means matching all values.
+        assert_eq!(
+            enforcer.get_filtered_policy(0, &["data2_admin", "", "read"]),
+            &[["data2_admin", "data2", "read"]]
+        );
+        assert_eq!(
+            enforcer.get_filtered_policy(1, &["data2", "write"]),
+            &[["bob", "data2", "write"], ["data2_admin", "data2", "write"]]
+        );
+
         assert_eq!(enforcer.has_policy(&["alice", "data1", "read"]), true);
         assert_eq!(enforcer.has_policy(&["bob", "data2", "write"]), true);
         assert_eq!(enforcer.has_policy(&["alice", "data2", "read"]), false);
         assert_eq!(enforcer.has_policy(&["bob", "data3", "write"]), false);
 
-        assert_eq!(enforcer.get_grouping_policy(),
-        [
-            ["alice", "data2_admin"]
-        ]);
+        assert_eq!(enforcer.get_grouping_policy(), [["alice", "data2_admin"]]);
+
+        let empty: Vec<Vec<String>> = vec![];
+        assert_eq!(
+            enforcer.get_filtered_grouping_policy(0, &["alice"]),
+            &[["alice", "data2_admin"]]
+        );
+        assert_eq!(enforcer.get_filtered_grouping_policy(0, &["bob"]), empty.clone());
+        assert_eq!(
+            enforcer.get_filtered_grouping_policy(1, &["data1_admin"]),
+            empty.clone()
+        );
+        assert_eq!(
+            enforcer.get_filtered_grouping_policy(1, &["data2_admin"]),
+            &[["alice", "data2_admin"]]
+        );
+        // Note: Empty string in field_values means matching all values.
+        assert_eq!(
+            enforcer.get_filtered_grouping_policy(0, &["", "data2_admin"]),
+            &[["alice", "data2_admin"]]
+        );
 
         assert_eq!(enforcer.has_grouping_policy(&["alice", "data2_admin"]), true);
         assert_eq!(enforcer.has_grouping_policy(&["bob", "data2_admin"]), false);
@@ -220,7 +311,7 @@ mod tests {
         );
     }
 
-     #[test]
+    #[test]
     fn test_modify_grouping_policy_api() {
         let model = Model::from_file("examples/rbac_model.conf").expect("failed to load model");
         let adapter = FileAdapter::new("examples/rbac_policy.csv", false);

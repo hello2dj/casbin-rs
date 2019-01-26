@@ -39,22 +39,22 @@ impl Model {
         }
         None
     }
-    
+
     /// Get rules based on field filters from a policy.
     pub fn get_filtered_policy(
-        &mut self,
+        &self,
         sec: &str,
         ptype: &str,
-        field_index: i32,
-        field_values: Vec<String>,
+        field_index: usize,
+        field_values: &[&str],
     ) -> Option<Vec<Vec<String>>> {
         let mut res: Vec<Vec<String>> = Vec::new();
         if let Some(sec_map) = self.data.get(sec) {
             if let Some(assertion) = sec_map.get(ptype) {
                 for rules in &assertion.policy {
                     let mut matched = true;
-                    let i_rules = &rules[field_index as usize..];
-                    for (rule, field_value) in i_rules.iter().zip(&field_values) {
+                    let i_rules = &rules[field_index..];
+                    for (rule, field_value) in i_rules.iter().zip(field_values) {
                         if !field_value.is_empty() && rule != field_value {
                             matched = false;
                             break;
@@ -125,7 +125,7 @@ impl Model {
         }
         false
     }
-    
+
     /// Removes policy rules based on field filters from the model.
     pub fn remove_filtered_policy(
         &mut self,
