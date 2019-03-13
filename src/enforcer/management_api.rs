@@ -221,6 +221,8 @@ mod tests {
     use crate::enforcer::DefaultEnforcer;
     use crate::model::Model;
     use crate::persist::file_adapter::FileAdapter;
+    use crate::enforcer::Enforcer;
+    use crate::util::array_equals;
 
     #[test]
     fn test_get_policy_api() {
@@ -379,5 +381,26 @@ mod tests {
         assert_eq!(enforcer.get_users_for_role("data1_admin", None), Vec::<String>::new());
         assert_eq!(enforcer.get_users_for_role("data2_admin", None), Vec::<String>::new());
         assert_eq!(enforcer.get_users_for_role("data3_admin", None), ["eve"]);
+    }
+
+
+
+    fn test_string_list(my_res: Vec<String>, res: Vec<String>) -> bool{
+        if !array_equals(&res, &my_res){
+            return false;
+        }
+        return true;
+    }
+
+    #[test]
+    fn test_get_list(){
+        let model = Model::from_file("examples/rbac_model.conf").unwrap();
+        let adapter = FileAdapter::new("examples/rbac_policy.csv", false);
+        let enforcer = DefaultEnforcer::new(model, adapter).expect("failed to create instance of Enforcer");
+
+        assert_eq!(test_string_list(enforcer.get_all_subjects(), vec!["alice".to_owned(), "bob".to_owned(), "data2_admin".to_owned()]), true);
+        assert_eq!(test_string_list(enforcer.get_all_objects(), vec!["data1".to_owned(), "data2".to_owned()]), true);
+        assert_eq!(test_string_list(enforcer.get_all_actions(), vec!["read".to_owned(), "write".to_owned()]), true);
+        assert_eq!(test_string_list(enforcer.get_all_roles(), vec!["data2_admin".to_owned()]), true);
     }
 }
