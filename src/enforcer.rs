@@ -11,6 +11,7 @@ use crate::persist::Adapter;
 use crate::rbac::{DefaultRoleManager, RoleManager};
 use crate::util::builtin_operators;
 use std::collections::HashMap;
+use std::process::Output;
 
 mod internal_api;
 pub mod management_api;
@@ -197,6 +198,63 @@ impl<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> Enforcer<A, RM, 
             }
 
             // TODO(jtrepanier): Assuming that the effect of rules is Allow for now.
+            policy_effects.push(Effect::Allow);
+        }
+
+        let effect_expr = &self.model.data["e"]["e"].value;
+        self.effector.merge_effects(effect_expr, policy_effects, vec![])
+    }
+
+    pub fn test_matcher(&self, subject: &str, object: &str, action: &str) -> Result<bool, Error> {
+        let mut policy_effects: Vec<Effect> = vec![];
+
+        let expr_string = &self.model.data["m"]["m"].value;
+
+        for policy in &self.model.data["p"]["p"].policy {
+            let mut expr = Expr::new(expr_string.clone())
+                .value("r_sub", subject)
+                .value("r_obj", object)
+                .value("r_act", action)
+                .value("p_sub", &policy[0])
+                .value("p_obj", &policy[1])
+                .value("p_act", &policy[2]);
+
+            let function_map = get_function_map().0;
+            let mut funcs: Vec<(Arc<&str>, Arc<Box<Fn(&str,&str)->bool + Sync>>)> = Vec::new();
+
+            for f in function_map{
+                let key = Arc::from(f.0);
+                let func = Arc::new(f.1);
+                funcs.push((key, func));
+            }
+
+            for i in 0..funcs.len() {
+                let name = Arc::try_unwrap(funcs[i].0).unwrap_or_default();
+                let mut func = Arc::downcast(funcs[i].1).unwrap();
+
+                expr = expr.function(name, |v|{
+                    Ok(to_value(func(&v[0].to_string(), &v[1].to_string())))
+                })
+            }
+
+            let role_manager = Arc::clone(&self.role_manager);
+            let expr = expr.function("g", move |v| {
+                // TODO(sduquette): handle domain in v[2].
+                let name1 = v[0].as_str().unwrap();
+                let name2 = v[1].as_str().unwrap();
+                let result = role_manager.lock().unwrap().has_link(name1, name2, None);
+
+                Ok(to_value(result))
+            });
+
+            let result = expr.exec().map_err(Error::Eval)?;
+
+            if result == to_value(false) {
+                policy_effects.push(Effect::Indeterminate);
+                continue;
+            }
+
+            // TODO(sduquette): Assuming that the effect of rules is Allow for now.
             policy_effects.push(Effect::Allow);
         }
 
@@ -404,7 +462,7 @@ mod tests {
         assert_eq!(enforcer.add_permission_for_user("alice", &["data1", "read"]), true);
         assert_eq!(enforcer.add_permission_for_user("bob", &["data2", "write"]), true);
 
-        assert_eq!(enforcer.enforce("alice", "data1", "read").unwrap(), true);
+        assert_eq!(enforcer.test_matcher("alice", "data1", "read").unwrap(), true);
         assert_eq!(enforcer.enforce("alice", "data1", "write").unwrap(), false);
         assert_eq!(enforcer.enforce("alice", "data2", "read").unwrap(), false);
         assert_eq!(enforcer.enforce("alice", "data2", "write").unwrap(), false);
