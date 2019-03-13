@@ -173,3 +173,260 @@ impl Model {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::model::Model;
+    use crate::persist::file_adapter::FileAdapter;
+    use crate::enforcer::DefaultEnforcer;
+
+    #[test]
+    fn test_basic_model(){
+        let mut model = Model::from_file("examples/basic_model.conf").unwrap();
+        let adapter = FileAdapter::new("examples/basic_policy.csv", false);
+        let mut enforcer = DefaultEnforcer::new(model, adapter).unwrap();
+
+        assert_eq!(enforcer.enforce("alice", "data1", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "data1", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "data2", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "data2", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data1", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data1", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data2", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data2", "write").unwrap(), true);
+    }
+
+    #[test]
+    fn test_basic_model_no_policy(){
+        let mut model = Model::from_file("examples/basic_model.conf").unwrap();
+        let adapter = FileAdapter::new("examples/empty.csv", false);
+        let mut enforcer = DefaultEnforcer::new(model, adapter).unwrap();
+
+        assert_eq!(enforcer.enforce("alice", "data1", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "data1", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "data2", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "data2", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "data1", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "data1", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "data2", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "data2", "write").unwrap(), false);
+    }
+
+    #[test]
+    fn test_basic_model_with_root(){
+        let mut model = Model::from_file("examples/basic_with_root_model.conf").unwrap();
+        let adapter = FileAdapter::new("examples/basic_policy.csv", false);
+        let mut enforcer = DefaultEnforcer::new(model, adapter).unwrap();
+
+        assert_eq!(enforcer.enforce("alice", "data1", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "data1", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "data2", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "data2", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data1", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data1", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data2", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data2", "write").unwrap(), true);
+        assert_eq!(enforcer.enforce("root", "data1", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce("root", "data1", "write").unwrap(), true);
+        assert_eq!(enforcer.enforce("root", "data2", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce("root", "data2", "write").unwrap(), true);
+    }
+
+    #[test]
+    fn test_basic_model_with_root_no_policy(){
+        let mut model = Model::from_file("examples/basic_with_root_model.conf").unwrap();
+        let adapter = FileAdapter::new("examples/empty.csv", false);
+        let mut enforcer = DefaultEnforcer::new(model, adapter).unwrap();
+
+        assert_eq!(enforcer.enforce("alice", "data1", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "data1", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "data2", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "data2", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data1", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data1", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data2", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data2", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("root", "data1", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce("root", "data1", "write").unwrap(), true);
+        assert_eq!(enforcer.enforce("root", "data2", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce("root", "data2", "write").unwrap(), true);
+    }
+
+    #[test]
+    fn test_basic_model_without_users(){
+        let mut model = Model::from_file("examples/basic_without_users_model.conf").unwrap();
+        let adapter = FileAdapter::new("examples/basic_without_users_policy.csv", false);
+        let mut enforcer = DefaultEnforcer::new(model, adapter).unwrap();
+
+        assert_eq!(enforcer.enforce_without_users("data1", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce_without_users("data1", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce_without_users("data2", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce_without_users("data2", "write").unwrap(), true);
+    }
+
+    #[test]
+    fn test_basic_model_without_resources(){
+        let mut model = Model::from_file("examples/basic_without_resources_model.conf").unwrap();
+        let adapter = FileAdapter::new("examples/basic_without_resources_policy.csv", false);
+        let mut enforcer = DefaultEnforcer::new(model, adapter).unwrap();
+
+        assert_eq!(enforcer.enforce_without_users("alice", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce_without_users("alice", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce_without_users("bob", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce_without_users("bob", "write").unwrap(), true);
+    }
+
+    #[test]
+    fn test_rbac_model(){
+        let mut model = Model::from_file("examples/rbac_model.conf").unwrap();
+        let adapter = FileAdapter::new("examples/rbac_policy.csv", false);
+        let mut enforcer = DefaultEnforcer::new(model, adapter).unwrap();
+
+        assert_eq!(enforcer.enforce("alice", "data1", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "data1", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "data2", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "data2", "write").unwrap(), true);
+        assert_eq!(enforcer.enforce("bob", "data1", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data1", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data2", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data2", "write").unwrap(), true);
+    }
+
+    #[test]
+    fn test_rbac_model_with_resources_roles(){
+        let mut model = Model::from_file("examples/rbac_with_resource_roles_model.conf").unwrap();
+        let adapter = FileAdapter::new("examples/rbac_with_resource_roles_policy.csv", false);
+        let mut enforcer = DefaultEnforcer::new(model, adapter).unwrap();
+
+        assert_eq!(enforcer.enforce("alice", "data1", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "data1", "write").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "data2", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "data2", "write").unwrap(), true);
+        assert_eq!(enforcer.enforce("bob", "data1", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data1", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data2", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data2", "write").unwrap(), true);
+    }
+
+    #[test]
+    #[ignore]
+    /// TODO: Model with domain not implemented yet(jtrepanier)
+    fn test_rbac_model_with_domains(){
+
+    }
+
+    #[test]
+    #[ignore]
+    /// TODO: Model with domain not implemented yet(jtrepanier)
+    fn test_rbac_model_with_domains_at_runtime(){
+
+    }
+
+    #[test]
+    #[ignore]
+    /// TODO: Model with domain not implemented yet(jtrepanier)
+    fn test_rbac_model_with_domains_at_runtime_mock_adapter(){
+
+    }
+
+    #[test]
+    fn test_rbac_model_with_deny(){
+        let mut model = Model::from_file("examples/rbac_with_deny_model.conf").unwrap();
+        let adapter = FileAdapter::new("examples/rbac_with_deny_policy.csv", false);
+        let mut enforcer = DefaultEnforcer::new(model, adapter).unwrap();
+
+        assert_eq!(enforcer.enforce("alice", "data1", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "data1", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "data2", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "data2", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data1", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data1", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data2", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data2", "write").unwrap(), true);
+    }
+
+    #[test]
+    fn test_rbac_model_with_only_deny(){
+        let mut model = Model::from_file("examples/rbac_with_not_deny_model.conf").unwrap();
+        let adapter = FileAdapter::new("examples/rbac_with_deny_policy.csv", false);
+        let mut enforcer = DefaultEnforcer::new(model, adapter).unwrap();
+
+        assert_eq!(enforcer.enforce("alice", "data2", "write").unwrap(), false);
+    }
+
+    #[test]
+    fn test_rbac_model_with_custom_data(){
+        let mut model = Model::from_file("examples/rbac_model.conf").unwrap();
+        let adapter = FileAdapter::new("examples/rbac_policy.csv", false);
+        let mut enforcer = DefaultEnforcer::new(model, adapter).unwrap();
+
+        /// You can add custom data to a grouping policy. Casbin will ignore it. It is only meaningful to the caller.
+        /// This feature can be used to store information like wether "bob" is an end user (so no subject will inherit "bob")
+        /// For Casbin, it is equivalent to: enforcer.add_grouping_policy("bob", "data2_admin")
+        enforcer.add_grouping_policy(&["bob", "data2_admin", "custom_data"]);
+
+        assert_eq!(enforcer.enforce("alice", "data1", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "data1", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "data2", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "data2", "write").unwrap(), true);
+        assert_eq!(enforcer.enforce("bob", "data1", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data1", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data2", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce("bob", "data2", "write").unwrap(), true);
+
+        /// You should also take the custom data as a parameter when deleting a grouping policy.
+        /// enforcer.remove_grouping_policy("bob", "data2_admin") won't work.
+        /// Or you can remove it by using remove_filtered_grouping_policy().
+        enforcer.remove_grouping_policy(&["bob", "data2_admin", "custom_data"]);
+
+        assert_eq!(enforcer.enforce("alice", "data1", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "data1", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("alice", "data2", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "data2", "write").unwrap(), true);
+        assert_eq!(enforcer.enforce("bob", "data1", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data1", "write").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data2", "read").unwrap(), false);
+        assert_eq!(enforcer.enforce("bob", "data2", "write").unwrap(), true);
+    }
+
+    #[test]
+    #[ignore]
+    /// TODO(jtrepanier): can't add matching function for now
+    fn test_rbac_model_with_pattern(){
+        let mut model = Model::from_file("examples/rbac_with_pattern_model.conf").unwrap();
+        let adapter = FileAdapter::new("examples/rbac_with_pattern_policy.csv", false);
+        let mut enforcer = DefaultEnforcer::new(model, adapter).unwrap();
+    }
+
+    #[test]
+    #[ignore]
+    /// TODO(jtrepanier): Add missing function
+    fn test_rbac_model_with_custom_role_manager(){
+        let mut model = Model::from_file("examples/rbac_model.conf").unwrap();
+        let adapter = FileAdapter::new("examples/rbac_policy.csv", false);
+        let mut enforcer = DefaultEnforcer::new(model, adapter).unwrap();
+    }
+
+    #[test]
+    #[ignore]
+    fn test_abac_model(){
+        /*let mut model = Model::from_file("examples/abac_model.conf").unwrap();
+        let mut enforcer = DefaultEnforcer::new(model, None).unwrap();*/
+    }
+
+    #[test]
+    fn test_key_match_model(){
+        let mut model = Model::from_file("examples/keymatch_model.conf").unwrap();
+        let adapter = FileAdapter::new("examples/keymatch_policy.csv", false);
+        let mut enforcer = DefaultEnforcer::new(model, adapter).unwrap();
+
+        assert_eq!(enforcer.enforce("alice", "/alice_data/resource1", "GET").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "/alice_data/resource1", "POST").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "/alice_data/resource2", "GET").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "/alice_data/resource2", "POST").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "/bob_data/resource1", "GET").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "/bob_data/resource1", "POST").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "/bob_data/resource2", "GET").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "/bob_data/resource2", "POST").unwrap(), true);
+    }
+}
