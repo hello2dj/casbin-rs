@@ -48,6 +48,10 @@ impl RoleManager for DefaultRoleManager {
     fn has_link(&self, name1: &str, name2: &str, domain: Option<&str>) -> bool {
         let (name1, name2) = DefaultRoleManager::get_names_with_domain(name1, name2, domain);
 
+        if name1 == name2 {
+            return true;
+        }
+
         let role1 = match self.get_role(&name1) {
             Some(role) => role,
             None => return false,
@@ -55,10 +59,6 @@ impl RoleManager for DefaultRoleManager {
 
         if !self.has_role(&name2) {
             return false;
-        }
-
-        if name1 == name2 {
-            return true;
         }
 
         let result = role1.lock().unwrap().has_role(&name2, self.max_hierarchy_level);
