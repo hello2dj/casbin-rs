@@ -1,13 +1,26 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::fmt;
 
 use crate::error::Error;
 use crate::rbac::{Role, RoleManager};
+
+pub type Function = Fn(&str, &str) -> bool + Sync + Send;
+
+pub struct MatchingFunction(pub Box<Function>);
+
+impl fmt::Debug for MatchingFunction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "MatchingFunction")
+    }
+}
 
 #[derive(Debug)]
 pub struct DefaultRoleManager {
     roles: HashMap<String, Arc<Mutex<Role>>>,
     max_hierarchy_level: i32,
+    has_pattern: bool,
+    matching_function: Option<MatchingFunction>
 }
 
 impl RoleManager for DefaultRoleManager {
@@ -108,6 +121,8 @@ impl DefaultRoleManager {
         DefaultRoleManager {
             roles: HashMap::new(),
             max_hierarchy_level,
+            has_pattern: false,
+            matching_function: None
         }
     }
 
@@ -116,7 +131,21 @@ impl DefaultRoleManager {
     }
 
     fn create_role(&mut self, name: &str) -> Arc<Mutex<Role>> {
-        if self.has_role(name) {
+        let mut name = name;
+        if self.has_pattern {
+            if let Some(func) = &self.matching_function {
+                let f = &func.0;
+                for role in &self.roles {
+                    let key = &role.0;
+                    if f(name, key) {
+                        name = key;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if self.has_role(name){
             Arc::clone(self.roles.get(name).unwrap())
         } else {
             let role = Arc::new(Mutex::new(Role::new(name)));
@@ -141,6 +170,11 @@ impl DefaultRoleManager {
             Some(domain) => (domain.to_string() + "::" + name1, domain.to_string() + "::" + name2),
             None => (name1.to_string(), name2.to_string()),
         }
+    }
+
+    fn add_matching_function(&mut self, name: &str, matching_func: MatchingFunction){
+        self.has_pattern = true;
+        self.matching_function = Some(matching_func);
     }
 }
 
