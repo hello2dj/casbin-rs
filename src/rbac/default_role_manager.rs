@@ -3,17 +3,7 @@ use std::sync::{Arc, Mutex};
 use std::fmt;
 
 use crate::error::Error;
-use crate::rbac::{Role, RoleManager};
-
-pub type Function = Fn(&str, &str) -> bool + Sync + Send;
-
-pub struct MatchingFunction(pub Box<Function>);
-
-impl fmt::Debug for MatchingFunction {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "MatchingFunction")
-    }
-}
+use crate::rbac::{Role, RoleManager, MatchingFunction};
 
 #[derive(Debug)]
 pub struct DefaultRoleManager {
@@ -58,22 +48,18 @@ impl RoleManager for DefaultRoleManager {
     }
 
     /// Return true if `name1` inherits the role `name2`.
-    fn has_link(&self, name1: &str, name2: &str, domain: Option<&str>) -> bool {
+    fn has_link(&mut self, name1: &str, name2: &str, domain: Option<&str>) -> bool {
         let (name1, name2) = DefaultRoleManager::get_names_with_domain(name1, name2, domain);
 
         if name1 == name2 {
             return true;
         }
 
-        let role1 = match self.get_role(&name1) {
-            Some(role) => role,
-            None => return false,
-        };
-
-        if !self.has_role(&name2) {
+        if !self.has_role(&name1) || !self.has_role(&name2){
             return false;
         }
 
+        let role1 = self.create_role(&name1);
         let result = role1.lock().unwrap().has_role(&name2, self.max_hierarchy_level);
         result
     }
@@ -114,6 +100,11 @@ impl RoleManager for DefaultRoleManager {
     fn print_roles(&self) -> Result<(), Error> {
         unimplemented!()
     }
+
+    fn add_matching_function(&mut self, name: &str, matching_func: MatchingFunction){
+        self.has_pattern = true;
+        self.matching_function = Some(matching_func);
+    }
 }
 
 impl DefaultRoleManager {
@@ -127,6 +118,17 @@ impl DefaultRoleManager {
     }
 
     fn has_role(&self, name: &str) -> bool {
+        if self.has_pattern {
+            if let Some(func) = &self.matching_function {
+                let f = &func.0;
+                for role in &self.roles {
+                    let key = role.0;
+                    if f(name, key) {
+                        return true;
+                    }
+                }
+            }
+        }
         self.roles.contains_key(name)
     }
 
@@ -145,7 +147,7 @@ impl DefaultRoleManager {
             }
         }
 
-        if self.has_role(name){
+        if self.roles.contains_key(name){
             Arc::clone(self.roles.get(name).unwrap())
         } else {
             let role = Arc::new(Mutex::new(Role::new(name)));
