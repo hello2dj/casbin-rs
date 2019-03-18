@@ -2,7 +2,6 @@ use crate::effect::Effector;
 use crate::enforcer::Enforcer;
 use crate::persist::Adapter;
 use crate::rbac::RoleManager;
-use std::iter::Map;
 use std::collections::HashMap;
 
 impl<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> Enforcer<A, RM, E> {
@@ -277,9 +276,6 @@ mod tests {
         let adapter = FileAdapter::new("examples/rbac_with_hierarchy_policy.csv", false);
         let mut enforcer = DefaultEnforcer::new(model, adapter).unwrap();
 
-        let test = enforcer.get_implicit_roles_for_user("alice");
-        println!("{:?}", test);
-
         assert_eq!(array_2_d_equals(&enforcer.get_permissions_for_user("alice"), &vec![vec!["alice".to_owned(), "data1".to_owned(), "read".to_owned()]]), true);
         assert_eq!(array_2_d_equals(&enforcer.get_permissions_for_user("bob"), &vec![vec!["bob".to_owned(), "data2".to_owned(), "write".to_owned()]]), true);
 
@@ -295,9 +291,6 @@ mod tests {
 
         assert_eq!(array_2_d_equals(&enforcer.get_permissions_for_user("alice"), &vec![vec!["alice".to_owned(), "data1".to_owned(), "read".to_owned()]]), true);
         assert_eq!(array_2_d_equals(&enforcer.get_permissions_for_user("bob"), &vec![vec!["bob".to_owned(), "data2".to_owned(), "write".to_owned()]]), true);
-
-        //let test = enforcer.get_implicit_permissions_for_user("alice");
-        //println!("{:?}", test);
 
         assert_eq!(array_2_d_equals(&enforcer.get_implicit_permissions_for_user("alice"),
                                     &vec![
