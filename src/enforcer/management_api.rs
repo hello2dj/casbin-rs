@@ -216,12 +216,9 @@ impl<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> Enforcer<A, RM, 
 
 #[cfg(test)]
 mod tests {
-    use crate::error::Error;
-
     use crate::enforcer::DefaultEnforcer;
     use crate::model::Model;
     use crate::persist::file_adapter::FileAdapter;
-    use crate::enforcer::Enforcer;
     use crate::util::array_equals;
 
     #[test]
