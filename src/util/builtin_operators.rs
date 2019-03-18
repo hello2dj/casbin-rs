@@ -4,9 +4,12 @@ use ipnet::Ipv4Net;
 use iprange::IpRange;
 use lazy_static::lazy_static;
 use regex::Regex;
+use crate::rbac::RoleManager;
+use crate::rbac::DefaultRoleManager;
 
 lazy_static! {
     static ref REGEX_KEY_MATCH2: Regex = Regex::new(r"(.*):[^/]+(.*)").unwrap();
+    static ref REGEX_KEY_MATCH3: Regex = Regex::new(r"(.*)\{[^/]+\}(.*)").unwrap();
 }
 
 /// Determines whether `key1` matches the pattern of `key2` (similar to RESTful path).
@@ -24,14 +27,19 @@ pub fn key_match(key1: &str, key2: &str) -> bool {
     }
 }
 
-// Determine whether `key1` matches the pattern of key2 (similar to RESTful path),
-//
-// `key2` can contain a '*' or ':'. For example, "/foo/bar" matches "/foo/*",
-// "/resource1" matches "/:resource".
+/// Determine whether `key1` matches the pattern of key2 (similar to RESTful path),
+///
+/// `key2` can contain a '*' or ':'. For example, "/foo/bar" matches "/foo/*",
+/// "/resource1" matches "/:resource".
 pub fn key_match2(key1: &str, key2: &str) -> bool {
     let mut key2 = key2.replace("/*", "/.*");
+
     while key2.contains("/:") {
         key2 = REGEX_KEY_MATCH2.replace_all(&key2, "$1[^/]+$2").to_string();
+    }
+
+    while key2.contains("/{") {
+        key2 = REGEX_KEY_MATCH3.replace_all(&key2, "$1[^/]+$2").to_string();
     }
 
     regex_match(key1, &key2)
