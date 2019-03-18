@@ -1,5 +1,6 @@
 use std::ops::DerefMut;
 use std::sync::{Arc, Mutex};
+use std::any::Any;
 
 use eval::{to_value, Expr};
 
@@ -8,7 +9,7 @@ use crate::error::Error;
 use crate::model::Model;
 use crate::model::{get_function_map, FunctionMap};
 use crate::persist::Adapter;
-use crate::rbac::{DefaultRoleManager, RoleManager};
+use crate::rbac::{DefaultRoleManager, RoleManager, MatchingFunction};
 use crate::util::builtin_operators;
 use std::collections::HashMap;
 use std::process::Output;
@@ -87,7 +88,7 @@ impl<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> Enforcer<A, RM, 
         let expr_string = &self.model.data["m"]["m"].value;
 
         for policy in &self.model.data["p"]["p"].policy {
-            let expr = Expr::new(expr_string.clone())
+            let mut expr = Expr::new(expr_string.clone())
                 .value("r_sub", subject)
                 .value("r_obj", object)
                 .value("r_act", action)
@@ -119,15 +120,101 @@ impl<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> Enforcer<A, RM, 
                     )))
                 });
 
-            let role_manager = Arc::clone(&self.role_manager);
-            let expr = expr.function("g", move |v| {
-                // TODO(sduquette): handle domain in v[2].
-                let name1 = v[0].as_str().unwrap();
-                let name2 = v[1].as_str().unwrap();
-                let result = role_manager.lock().unwrap().has_link(name1, name2, None);
+            if self.model.data.contains_key("g"){
+                let g = &self.model.data["g"];
+                for gfunction in g{
+                    let role_manager = Arc::clone(&self.role_manager);
+                    let name = gfunction.0;
+                    expr = expr.function(name.to_string(), move|v|{
+                        let name1 = v[0].as_str().unwrap();
+                        let name2 = v[1].as_str().unwrap();
+                        let mut domain = None;
 
-                Ok(to_value(result))
-            });
+                        if v.len() > 2{
+                            domain = Some(v[2].as_str().unwrap());
+                        }
+
+                        let result = role_manager.lock().unwrap().has_link(name1, name2, domain);
+                        Ok(to_value(result))
+                    });
+                }
+            }
+
+            let result = expr.exec().map_err(Error::Eval)?;
+
+            if result == to_value(false) {
+                policy_effects.push(Effect::Indeterminate);
+                continue;
+            }
+
+            // TODO(sduquette): Assuming that the effect of rules is Allow for now.
+            policy_effects.push(Effect::Allow);
+        }
+
+        let effect_expr = &self.model.data["e"]["e"].value;
+        self.effector.merge_effects(effect_expr, policy_effects, vec![])
+    }
+
+    // TODO: enforce does not handle matcherResults.
+    pub fn enforce_with_domain(&self, subject: &str, domain: &str, object: &str, action: &str) -> Result<bool, Error> {
+        let mut policy_effects: Vec<Effect> = vec![];
+
+        let expr_string = &self.model.data["m"]["m"].value;
+
+        for policy in &self.model.data["p"]["p"].policy {
+            let mut expr = Expr::new(expr_string.clone())
+                .value("r_sub", subject)
+                .value("r_dom", domain)
+                .value("r_obj", object)
+                .value("r_act", action)
+                .value("p_sub", &policy[0])
+                .value("p_dom", &policy[1])
+                .value("p_obj", &policy[2])
+                .value("p_act", &policy[3])
+                .function("keyMatch", |v| {
+                    Ok(to_value(builtin_operators::key_match(
+                        v[0].as_str().unwrap(),
+                        v[1].as_str().unwrap(),
+                    )))
+                })
+                .function("keyMatch2", |v| {
+                    Ok(to_value(builtin_operators::key_match2(
+                        v[0].as_str().unwrap(),
+                        v[1].as_str().unwrap(),
+                    )))
+                })
+                .function("ipMatch", |v| {
+                    Ok(to_value(builtin_operators::ip_match(
+                        v[0].as_str().unwrap(),
+                        v[1].as_str().unwrap(),
+                    )))
+                })
+                .function("regexMatch", |v| {
+                    Ok(to_value(builtin_operators::regex_match(
+                        v[0].as_str().unwrap(),
+                        v[1].as_str().unwrap(),
+                    )))
+                });
+
+            if self.model.data.contains_key("g"){
+                let g = &self.model.data["g"];
+                for gfunction in g{
+                    let role_manager = Arc::clone(&self.role_manager);
+                    let name = gfunction.0;
+                    expr = expr.function(name.to_string(), move|v|{
+                        let name1 = v[0].as_str().unwrap();
+                        let name2 = v[1].as_str().unwrap();
+                        let mut domain = None;
+
+                        if v.len() > 2{
+                            domain = Some(v[2].as_str().unwrap());
+                        }
+
+                        let result = role_manager.lock().unwrap().has_link(name1, name2, domain);
+                        Ok(to_value(result))
+                    });
+                }
+            }
 
             let result = expr.exec().map_err(Error::Eval)?;
 
@@ -149,12 +236,21 @@ impl<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> Enforcer<A, RM, 
         let mut policy_effects: Vec<Effect> = vec![];
 
         let expr_string = &self.model.data["m"]["m"].value;
+        let matcher;
+
+        // Temporary solution to allow test_basic_model_without_users() and test_permission_api() to both work using this function
+        if expr_string.contains("obj"){
+            matcher = "obj";
+        }
+        else {
+            matcher = "sub"
+        }
 
         for policy in &self.model.data["p"]["p"].policy{
-            let expr = Expr::new(expr_string.clone())
-                .value("r_sub", subject)
+            let mut expr = Expr::new(expr_string.clone())
+                .value(format!("{}{}", "r_", matcher), subject)
                 .value("r_act", action)
-                .value("p_sub", &policy[0])
+                .value(format!("{}{}", "p_", matcher), &policy[0])
                 .value("p_act", &policy[1])
                 .function("keyMatch", |v| {
                     Ok(to_value(builtin_operators::key_match(
@@ -162,90 +258,44 @@ impl<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> Enforcer<A, RM, 
                         v[1].as_str().unwrap(),
                     )))
                 })
-                .function("keyMatch2", |v|{
+                .function("keyMatch2", |v| {
                     Ok(to_value(builtin_operators::key_match2(
                         v[0].as_str().unwrap(),
                         v[1].as_str().unwrap(),
                     )))
                 })
-                .function("ipMatch", |v|{
+                .function("ipMatch", |v| {
                     Ok(to_value(builtin_operators::ip_match(
                         v[0].as_str().unwrap(),
                         v[1].as_str().unwrap(),
                     )))
                 })
-                .function("regexMatch", |v|{
+                .function("regexMatch", |v| {
                     Ok(to_value(builtin_operators::regex_match(
                         v[0].as_str().unwrap(),
                         v[1].as_str().unwrap(),
                     )))
                 });
 
-            let role_manager = Arc::clone(&self.role_manager);
-            let expr = expr.function("g", move|v|{
-                // TODO(jtrepanier): handle domain in v[2].
-                let name1 = v[0].as_str().unwrap();
-                let name2 = v[1].as_str().unwrap();
-                let result = role_manager.lock().unwrap().has_link(name1, name2, None);
-                Ok(to_value(result))
-            });
+            if self.model.data.contains_key("g"){
+                let g = &self.model.data["g"];
+                for gfunction in g{
+                    let role_manager = Arc::clone(&self.role_manager);
+                    let name = gfunction.0;
+                    expr = expr.function(name.to_string(), move|v|{
+                        let name1 = v[0].as_str().unwrap();
+                        let name2 = v[1].as_str().unwrap();
+                        let mut domain = None;
 
-            let result = expr.exec().map_err(Error::Eval)?;
+                        if v.len() > 2{
+                            domain = Some(v[2].as_str().unwrap());
+                        }
 
-            if result == to_value(false){
-                policy_effects.push(Effect::Indeterminate);
-                continue;
+                        let result = role_manager.lock().unwrap().has_link(name1, name2, domain);
+                        Ok(to_value(result))
+                    });
+                }
             }
-
-            // TODO(jtrepanier): Assuming that the effect of rules is Allow for now.
-            policy_effects.push(Effect::Allow);
-        }
-
-        let effect_expr = &self.model.data["e"]["e"].value;
-        self.effector.merge_effects(effect_expr, policy_effects, vec![])
-    }
-
-    pub fn test_matcher(&self, subject: &str, object: &str, action: &str) -> Result<bool, Error> {
-        let mut policy_effects: Vec<Effect> = vec![];
-
-        let expr_string = &self.model.data["m"]["m"].value;
-
-        for policy in &self.model.data["p"]["p"].policy {
-            let mut expr = Expr::new(expr_string.clone())
-                .value("r_sub", subject)
-                .value("r_obj", object)
-                .value("r_act", action)
-                .value("p_sub", &policy[0])
-                .value("p_obj", &policy[1])
-                .value("p_act", &policy[2]);
-
-            let function_map = get_function_map().0;
-            let mut funcs: Vec<(Arc<&str>, Arc<Box<Fn(&str,&str)->bool + Sync>>)> = Vec::new();
-
-            for f in function_map{
-                let key = Arc::from(f.0);
-                let func = Arc::new(f.1);
-                funcs.push((key, func));
-            }
-
-            for i in 0..funcs.len() {
-                let name = Arc::try_unwrap(funcs[i].0).unwrap_or_default();
-                let mut func = Arc::downcast(funcs[i].1).unwrap();
-
-                expr = expr.function(name, |v|{
-                    Ok(to_value(func(&v[0].to_string(), &v[1].to_string())))
-                })
-            }
-
-            let role_manager = Arc::clone(&self.role_manager);
-            let expr = expr.function("g", move |v| {
-                // TODO(sduquette): handle domain in v[2].
-                let name1 = v[0].as_str().unwrap();
-                let name2 = v[1].as_str().unwrap();
-                let result = role_manager.lock().unwrap().has_link(name1, name2, None);
-
-                Ok(to_value(result))
-            });
 
             let result = expr.exec().map_err(Error::Eval)?;
 
@@ -260,6 +310,11 @@ impl<A: Adapter, RM: RoleManager + Send + 'static, E: Effector> Enforcer<A, RM, 
 
         let effect_expr = &self.model.data["e"]["e"].value;
         self.effector.merge_effects(effect_expr, policy_effects, vec![])
+    }
+
+
+    pub fn add_matching_function(&self, name: &str, matching_func: MatchingFunction){
+        self.role_manager.lock().unwrap().add_matching_function(name, matching_func);
     }
 }
 
@@ -462,7 +517,7 @@ mod tests {
         assert_eq!(enforcer.add_permission_for_user("alice", &["data1", "read"]), true);
         assert_eq!(enforcer.add_permission_for_user("bob", &["data2", "write"]), true);
 
-        assert_eq!(enforcer.test_matcher("alice", "data1", "read").unwrap(), true);
+        assert_eq!(enforcer.enforce("alice", "data1", "read").unwrap(), true);
         assert_eq!(enforcer.enforce("alice", "data1", "write").unwrap(), false);
         assert_eq!(enforcer.enforce("alice", "data2", "read").unwrap(), false);
         assert_eq!(enforcer.enforce("alice", "data2", "write").unwrap(), false);
@@ -474,7 +529,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    //test failed because Eval crates does not recognize in operator
+    /// Test failed because Eval crates does not recognize `in` operator (jtrepanier)
     fn test_matcher_using_in_operator(){
         let mut model = Model::from_file("examples/rbac_model_matcher_using_in_op.conf").unwrap();
         let adapter = FileAdapter::new("examples/empty.csv", false);
